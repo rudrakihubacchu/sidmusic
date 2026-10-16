@@ -85,7 +85,6 @@ function applyAuthenticatedUser(user) {
 
   renderRoomMembers([user]);
 
-  // If user opened a shared Duo or Trio Link, join the room automatically after login
   const params = new URLSearchParams(window.location.search);
   const room = params.get("room");
   const mode = params.get("mode") || "duo";
@@ -168,72 +167,125 @@ function updateBgSpeed(sec) {
 }
 
 /* =========================================================================
-   3. REAL HINDI & ENGLISH SONGS ENGINE (NO DEMO TRACKS)
+   3. 100% FULL-LENGTH SONGS ENGINE (320KBPS + GLOBAL YOUTUBE MUSIC)
    ========================================================================= */
 let songs = [];
-let likedSongIds = new Set();
+let likedSongsMap = new Map();
 let currentIndex = 0;
 let isPlaying = false;
 let isLooping = false;
 let playbackRate = 1.0;
 
+let activeCategory = "all";
+let activeQuery = "";
+let activePage = 1;
+
 const htmlAudio = new Audio();
 htmlAudio.preload = "auto";
 
-// Web Audio API Context for Rain Layer & Visualizer
 let audioCtx = null;
 let rainNode = null;
 let sleepTimeout = null;
 
+function formatDuration(sec) {
+  if (!sec || isNaN(sec)) return "0:00";
+  const m = Math.floor(sec / 60);
+  const s = String(Math.floor(sec % 60)).padStart(2, "0");
+  return `${m}:${s}`;
+}
+
 async function loadSongCategory(category = "all") {
+  activeCategory = category;
+  activeQuery = "";
+  activePage = 1;
+  document.getElementById("searchInput").value = "";
+
   const loader = document.getElementById("loadingIndicator");
   if (loader) loader.style.display = "inline";
 
   const headingMap = {
-    all: "Trending Real Hindi & English Hits",
-    hindi: "🇮🇳 Real Hindi Romantic Hits",
-    english: "🌎 Real English Chartbusters"
+    all: "🔥 All Trending Full-Length Songs",
+    hindi: "🇮🇳 Real Hindi Romantic & Bollywood Full Songs",
+    english: "🌎 Global English Full-Length Hits",
+    punjabi: "🎶 Punjabi Full-Length Chartbusters",
+    marathi: "🚩 Marathi Romantic & Evergreen Hits",
+    lofi: "🎧 Lo-Fi, Chill & Slowed Full Tracks",
+    party: "💃 Party & Club Anthems"
   };
   document.getElementById("catalogHeading").textContent = headingMap[category] || headingMap.all;
 
   try {
-    const res = await fetch(`/api/songs?category=${encodeURIComponent(category)}`);
+    const res = await fetch(`/api/songs?category=${encodeURIComponent(category)}&page=1`);
     const data = await res.json();
-    if (data.songs && data.songs.length > 0) {
+    if (data.songs) {
       songs = data.songs.map((s) => ({
         ...s,
-        liked: likedSongIds.has(s.id)
+        liked: likedSongsMap.has(s.id)
       }));
       renderSongs();
     }
   } catch (err) {
-    console.error("Failed to fetch real songs:", err);
+    console.error("Failed to fetch full songs:", err);
   } finally {
     if (loader) loader.style.display = "none";
   }
 }
 
-async function searchRealSongs() {
+async function searchRealSongs(source = "auto") {
   const query = document.getElementById("searchInput").value.trim();
   if (!query) {
     loadSongCategory("all");
     return;
   }
 
+  activeQuery = query;
+  activePage = 1;
+
   const loader = document.getElementById("loadingIndicator");
   if (loader) loader.style.display = "inline";
-  document.getElementById("catalogHeading").textContent = `Search Results for "${query}"`;
+  document.getElementById("catalogHeading").textContent =
+    source === "youtube"
+      ? `🌎 Global YouTube Music Results for "${query}"`
+      : `Full-Length Results for "${query}"`;
 
   try {
-    const res = await fetch(`/api/songs?q=${encodeURIComponent(query)}`);
+    const res = await fetch(
+      `/api/songs?q=${encodeURIComponent(query)}&page=1&source=${encodeURIComponent(source)}`
+    );
     const data = await res.json();
     songs = (data.songs || []).map((s) => ({
       ...s,
-      liked: likedSongIds.has(s.id)
+      liked: likedSongsMap.has(s.id)
     }));
     renderSongs();
   } catch (err) {
     console.error("Search failed:", err);
+  } finally {
+    if (loader) loader.style.display = "none";
+  }
+}
+
+async function loadMoreSongs() {
+  activePage += 1;
+  const loader = document.getElementById("loadingIndicator");
+  if (loader) loader.style.display = "inline";
+
+  try {
+    const url = activeQuery
+      ? `/api/songs?q=${encodeURIComponent(activeQuery)}&page=${activePage}`
+      : `/api/songs?category=${encodeURIComponent(activeCategory)}&page=${activePage}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.songs && data.songs.length > 0) {
+      const existingIds = new Set(songs.map((s) => s.id));
+      const newTracks = data.songs
+        .filter((s) => !existingIds.has(s.id))
+        .map((s) => ({ ...s, liked: likedSongsMap.has(s.id) }));
+      songs = [...songs, ...newTracks];
+      renderSongs();
+    }
+  } catch (err) {
+    console.error("Load more failed:", err);
   } finally {
     if (loader) loader.style.display = "none";
   }
@@ -245,7 +297,6 @@ function playSong(index, broadcast = true) {
   const track = songs[currentIndex];
   isPlaying = true;
 
-  // Update Player & Spinning Vinyl UI
   document.getElementById("playerArt").src = track.cover;
   document.getElementById("vinylArt").src = track.cover;
   document.getElementById("vinylDisc").classList.add("spinning");
@@ -253,7 +304,9 @@ function playSong(index, broadcast = true) {
   document.getElementById("playerArtist").textContent = track.artist;
   document.getElementById("playPauseBtn").textContent = "⏸";
   document.getElementById("favBtn").classList.toggle("active", !!track.liked);
-  document.getElementById("lyricTicker").textContent = `♫ Now Streaming: ${track.title} — ${track.artist} (${(track.language || "Music").toUpperCase()})`;
+  document.getElementById("durTime").textContent = formatDuration(track.duration);
+  document.getElementById("lyricTicker").textContent =
+    `♫ Streaming Full Song (${formatDuration(track.duration)}): ${track.title} — ${track.artist}`;
 
   htmlAudio.src = track.audioUrl;
   htmlAudio.loop = isLooping;
@@ -271,7 +324,6 @@ function playSong(index, broadcast = true) {
 }
 
 function playSyncedTrack(track, seekTime = 0) {
-  // Check if track already exists in list; otherwise insert it at the top
   let idx = songs.findIndex((s) => s.id === track.id);
   if (idx === -1) {
     songs.unshift(track);
@@ -331,19 +383,13 @@ function setVolume(val) {
   htmlAudio.volume = parseFloat(val);
 }
 
-function formatTime(sec) {
-  if (!sec || isNaN(sec)) return "0:00";
-  const m = Math.floor(sec / 60);
-  const s = String(Math.floor(sec % 60)).padStart(2, "0");
-  return `${m}:${s}`;
-}
-
 htmlAudio.addEventListener("timeupdate", () => {
-  if (!htmlAudio.duration) return;
-  const pct = (htmlAudio.currentTime / htmlAudio.duration) * 100;
+  const totalDur = htmlAudio.duration || (songs[currentIndex] && songs[currentIndex].duration) || 0;
+  if (!totalDur) return;
+  const pct = Math.min(100, (htmlAudio.currentTime / totalDur) * 100);
   document.getElementById("seekBar").value = pct;
-  document.getElementById("curTime").textContent = formatTime(htmlAudio.currentTime);
-  document.getElementById("durTime").textContent = formatTime(htmlAudio.duration);
+  document.getElementById("curTime").textContent = formatDuration(htmlAudio.currentTime);
+  document.getElementById("durTime").textContent = formatDuration(totalDur);
 });
 
 htmlAudio.addEventListener("ended", () => {
@@ -351,8 +397,9 @@ htmlAudio.addEventListener("ended", () => {
 });
 
 function seekSong(pct) {
-  if (!htmlAudio.duration) return;
-  const targetTime = (Number(pct) / 100) * htmlAudio.duration;
+  const totalDur = htmlAudio.duration || (songs[currentIndex] && songs[currentIndex].duration) || 0;
+  if (!totalDur) return;
+  const targetTime = (Number(pct) / 100) * totalDur;
   htmlAudio.currentTime = targetTime;
   broadcastSyncState("SEEK", { currentTime: targetTime });
 }
@@ -441,7 +488,7 @@ function setSleepTimer(minutes) {
 }
 
 /* =========================================================================
-   5. REAL AUDIO FILE DOWNLOAD
+   5. FULL-LENGTH AUDIO FILE DOWNLOAD
    ========================================================================= */
 function downloadCurrentSong() {
   const track = songs[currentIndex];
@@ -492,7 +539,7 @@ function copyRoomLink(inputId) {
   if (!input.value) return;
   input.select();
   navigator.clipboard.writeText(input.value);
-  alert("Invite Link Copied! Send it to your partner or friends to stream in real-time sync.");
+  alert("Invite Link Copied! Send it to your partner or friends to stream full songs in real-time sync.");
 }
 
 function broadcastSyncState(action, payload) {
@@ -507,7 +554,6 @@ if (socket) {
     renderRoomMembers(data.members);
     toggleVideoBackground(true);
 
-    // Sync current playing track when partner joins
     if (songs[currentIndex]) {
       playSong(currentIndex, true);
     }
@@ -704,11 +750,13 @@ function renderSongs() {
     const activeClass = idx === currentIndex && isPlaying ? "playing" : "";
     const heartColor = song.liked ? "var(--primary)" : "var(--text-muted)";
     const badge = (song.language || "music").toUpperCase();
+    const durBadge = formatDuration(song.duration || 210);
     return `
       <div class="song-card ${activeClass}" onclick="playSong(${idx})">
         <div class="art-wrapper">
           <img src="${song.cover}" alt="${song.title}" loading="lazy" />
           <span class="lang-tag">${badge}</span>
+          <span class="dur-tag">${durBadge}</span>
           <div class="card-visualizer">
             <div class="bar"></div>
             <div class="bar"></div>
@@ -732,10 +780,13 @@ function renderSongs() {
     coupleGrid.innerHTML = songs.map((s, idx) => createCardHTML(s, idx)).join("");
   }
   if (favGrid) {
-    favGrid.innerHTML = songs
-      .map((s, idx) => ({ s, idx }))
-      .filter(({ s }) => s.liked)
-      .map(({ s, idx }) => createCardHTML(s, idx))
+    const likedList = Array.from(likedSongsMap.values());
+    favGrid.innerHTML = likedList
+      .map((s) => {
+        const idxInCurrent = songs.findIndex((item) => item.id === s.id);
+        const playIdx = idxInCurrent !== -1 ? idxInCurrent : 0;
+        return createCardHTML(s, playIdx);
+      })
       .join("");
   }
 }
@@ -744,14 +795,14 @@ function toggleCardLike(e, idx) {
   e.stopPropagation();
   const track = songs[idx];
   track.liked = !track.liked;
-  if (track.liked) likedSongIds.add(track.id);
-  else likedSongIds.delete(track.id);
+  if (track.liked) likedSongsMap.set(track.id, track);
+  else likedSongsMap.delete(track.id);
   triggerFavHeart(e, false);
   renderSongs();
 }
 
 function addNewSong() {
-  const title = document.getElementById("customTitle").value.trim() || "Custom Romantic Track";
+  const title = document.getElementById("customTitle").value.trim() || "Custom Full Track";
   const artist = document.getElementById("customArtist").value.trim() || (currentUser ? currentUser.name : "Artist");
   const directUrl = document.getElementById("customAudioUrl").value.trim();
   const fileInput = document.getElementById("customAudioFile");
@@ -765,16 +816,20 @@ function addNewSong() {
     return;
   }
 
-  songs.unshift({
+  const customObj = {
     id: `custom_${Date.now()}`,
     title,
     artist,
     cover: coupleWallpapers[bgIndex % coupleWallpapers.length],
-    language: "custom",
+    language: "Custom",
+    duration: 240,
     couple: true,
     liked: true,
     audioUrl
-  });
+  };
+
+  songs.unshift(customObj);
+  likedSongsMap.set(customObj.id, customObj);
 
   renderSongs();
   toggleWindow("addSongWin");
@@ -820,8 +875,8 @@ function triggerFavHeart(e, toggleCurrent = true) {
   if (toggleCurrent && songs[currentIndex]) {
     const track = songs[currentIndex];
     track.liked = !track.liked;
-    if (track.liked) likedSongIds.add(track.id);
-    else likedSongIds.delete(track.id);
+    if (track.liked) likedSongsMap.set(track.id, track);
+    else likedSongsMap.delete(track.id);
     document.getElementById("favBtn").classList.toggle("active", track.liked);
     renderSongs();
   }
