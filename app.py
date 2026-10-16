@@ -1,18 +1,33 @@
 import os
+import base64
 import sqlite3
+import html
 import requests
-from flask import Flask, render_template, request, jsonify, session, Response
+import yt_dlp
+from pyDes import des, ECB, PAD_PKCS5
+from flask import Flask, render_template, request, jsonify, session, Response, redirect
 from flask_socketio import SocketIO, emit, join_room
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "velvetsync-prod-secret-key-2026")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "velvetsync-fullsong-secret-2026")
 
-# Threading mode with simple-websocket for reliable Railway deployment
+# Threading mode with simple-websocket for Railway
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
 active_rooms = {}
+
+# Official DES Cipher for decrypting full-length 320kbps streams
+DES_CIPHER = des(b"38346591", ECB, b"\0\0\0\0\0\0\0\0", pad=None, padmode=PAD_PKCS5)
+
+HTTP_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json, text/plain, */*",
+}
 
 
 # ==============================================================================
@@ -109,131 +124,239 @@ def current_user():
 
 
 # ==============================================================================
-# 2. REAL HINDI & ENGLISH MUSIC API (JIOSAAVN + ITUNES FALLBACK)
+# 2. FULL-LENGTH 320KBPS MUSIC ENGINE + GLOBAL YOUTUBE MUSIC FALLBACK
 # ==============================================================================
-def fetch_from_saavn(query, limit=18):
-    """Fetches full-length real Hindi/English songs from JioSaavn API."""
-    tracks = []
+def decrypt_full_stream_url(enc_url, is_320=True):
+    """Decrypts official encrypted_media_url into a full-length 320kbps stream link."""
+    if not enc_url:
+        return None
     try:
-        resp = requests.get(
-            "https://saavn.dev/api/search/songs",
-            params={"query": query, "limit": limit},
-            timeout=6,
-        )
-        if resp.status_code == 200:
-            results = resp.json().get("data", {}).get("results", [])
-            for item in results:
-                downloads = item.get("downloadUrl") or []
-                if not downloads:
-                    continue
-                # Pick highest quality stream (320kbps or 160kbps)
-                audio_url = downloads[-1].get("url")
-                images = item.get("image") or []
-                cover_url = images[-1].get("url") if images else ""
-                artists = item.get("artists", {}).get("primary", [])
-                artist_names = ", ".join([a.get("name", "") for a in artists]) or "Various Artists"
-                lang = (item.get("language") or "hindi").lower()
-
-                if audio_url:
-                    tracks.append(
-                        {
-                            "id": f"saavn_{item.get('id')}",
-                            "title": item.get("name", "Unknown Title").replace("&quot;", '"'),
-                            "artist": artist_names,
-                            "cover": cover_url,
-                            "audioUrl": audio_url,
-                            "language": "hindi" if lang in ["hindi", "punjabi", "urdu"] else "english",
-                            "couple": True,
-                            "duration": item.get("duration") or 210,
-                        }
-                    )
+        enc_bytes = base64.b64decode(enc_url.strip())
+        dec_url = DES_CIPHER.decrypt(enc_bytes, padmode=PAD_PKCS5).decode("utf-8")
+        if is_320:
+            dec_url = dec_url.replace("_96.mp4", "_320.mp4").replace("_160.mp4", "_320.mp4")
+        else:
+            dec_url = dec_url.replace("_96.mp4", "_160.mp4")
+        return dec_url
     except Exception:
-        pass
-    return tracks
+        return None
 
 
-def fetch_from_itunes(query, lang_tag="hindi", limit=15):
-    """Reliable fallback using Apple iTunes Search API for real Hindi & English tracks."""
+def fetch_official_full_songs(query, page=1, limit=28):
+    """
+    Connects directly to the Official JioSaavn API v4 and decrypts 100% full-length
+    Hindi, English, Punjabi, Marathi, and Global songs (zero 30-second previews).
+    """
     tracks = []
     try:
         resp = requests.get(
-            "https://itunes.apple.com/search",
-            params={"term": query, "media": "music", "entity": "song", "limit": limit},
-            timeout=6,
+            "https://www.jiosaavn.com/api.php",
+            params={
+                "__call": "search.getResults",
+                "_format": "json",
+                "_marker": "0",
+                "api_version": "4",
+                "ctx": "web6dot0",
+                "n": limit,
+                "p": page,
+                "q": query,
+            },
+            headers=HTTP_HEADERS,
+            timeout=8,
         )
         if resp.status_code == 200:
-            for item in resp.json().get("results", []):
-                preview_url = item.get("previewUrl")
-                if not preview_url:
+            data = resp.json()
+            results = data.get("results") or []
+            for item in results:
+                more = item.get("more_info") or {}
+                enc_url = more.get("encrypted_media_url")
+                has_320 = str(more.get("320kbps", "true")).lower() == "true"
+                stream_url = decrypt_full_stream_url(enc_url, has_320)
+
+                if not stream_url:
                     continue
-                art = (item.get("artworkUrl100") or "").replace("100x100bb", "600x600bb")
+
+                duration_sec = int(more.get("duration") or 210)
+                # Filter out any ringtone or short clip under 60 seconds
+                if duration_sec < 60:
+                    continue
+
+                raw_title = html.unescape(item.get("title") or item.get("song") or "Unknown Track")
+                artist_map = more.get("artistMap") or {}
+                primary_artists = artist_map.get("primary_artists") or []
+                artist_names = ", ".join([html.unescape(a.get("name", "")) for a in primary_artists if a.get("name")])
+                if not artist_names:
+                    artist_names = html.unescape(item.get("subtitle") or "Various Artists")
+
+                cover = (item.get("image") or "").replace("150x150", "500x500").replace("50x50", "500x500")
+                lang = (item.get("language") or "music").capitalize()
+
                 tracks.append(
                     {
-                        "id": f"itunes_{item.get('trackId')}",
-                        "title": item.get("trackName", "Unknown Track"),
-                        "artist": item.get("artistName", "Unknown Artist"),
-                        "cover": art,
-                        "audioUrl": preview_url,
-                        "language": lang_tag,
+                        "id": f"saavn_{item.get('id')}",
+                        "title": raw_title,
+                        "artist": artist_names,
+                        "cover": cover,
+                        "audioUrl": stream_url,
+                        "language": lang,
+                        "duration": duration_sec,
                         "couple": True,
-                        "duration": int((item.get("trackTimeMillis") or 180000) / 1000),
                     }
                 )
-    except Exception:
-        pass
+    except Exception as e:
+        print("Official Saavn fetch error:", e)
+
     return tracks
+
+
+def fetch_youtube_full_songs(query, limit=12):
+    """
+    Searches YouTube Music / YouTube via yt-dlp for any global song, remix, or
+    Slowed + Reverb track not found in standard catalogs. Full length only.
+    """
+    tracks = []
+    ydl_opts = {
+        "quiet": True,
+        "extract_flat": True,
+        "skip_download": True,
+        "noplaylist": True,
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"ytsearch{limit}:{query} official audio", download=False)
+            for entry in info.get("entries") or []:
+                vid_id = entry.get("id")
+                duration = int(entry.get("duration") or 200)
+                if not vid_id or duration < 60 or duration > 900:
+                    continue
+                thumbs = entry.get("thumbnails") or []
+                cover = thumbs[-1].get("url") if thumbs else f"https://i.ytimg.com/vi/{vid_id}/hqdefault.jpg"
+                tracks.append(
+                    {
+                        "id": f"yt_{vid_id}",
+                        "title": entry.get("title") or "Unknown Track",
+                        "artist": entry.get("uploader") or entry.get("channel") or "Global Artist",
+                        "cover": cover,
+                        "audioUrl": f"/api/yt_stream/{vid_id}",
+                        "language": "Global",
+                        "duration": duration,
+                        "couple": True,
+                    }
+                )
+    except Exception as e:
+        print("yt-dlp search error:", e)
+    return tracks
+
+
+@app.route("/api/yt_stream/<video_id>")
+def stream_youtube_audio(video_id):
+    """Resolves a YouTube video ID into a direct full-length audio stream."""
+    ydl_opts = {
+        "format": "bestaudio[ext=m4a]/bestaudio/best",
+        "quiet": True,
+        "noplaylist": True,
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+            direct_url = info.get("url")
+            if direct_url:
+                return redirect(direct_url)
+    except Exception as e:
+        return str(e), 500
+    return "Stream unavailable", 404
+
+
+CATEGORY_QUERIES = {
+    "all": [
+        "Top Hindi English Romantic Hits",
+        "Arijit Singh Best Songs",
+        "The Weeknd Ed Sheeran Taylor Swift Hits",
+    ],
+    "hindi": [
+        "Arijit Singh Shreya Ghoshal Romantic Hits",
+        "Atif Aslam Pritam Vishal Mishra Hits",
+        "Bollywood Top Romantic Songs",
+    ],
+    "english": [
+        "The Weeknd Bruno Mars Ed Sheeran Hits",
+        "Taylor Swift Billie Eilish Lana Del Rey",
+        "Shawn Mendes Justin Bieber Charlie Puth",
+    ],
+    "punjabi": [
+        "Diljit Dosanjh Karan Aujla AP Dhillon",
+        "Shubh Sidhu Moose Wala गुरु रंधावा",
+    ],
+    "marathi": [
+        "Ajay Atul Marathi Romantic Hits",
+        "Sonu Nigam Shreya Ghoshal Marathi Songs",
+    ],
+    "lofi": [
+        "Hindi Lofi Slowed Reverb Romantic",
+        "Bollywood Chill Lofi Mix",
+    ],
+    "party": [
+        "Bollywood Party Hits Badshah Yo Yo Honey Singh",
+        "Global Club Hits Dua Lipa Alan Walker",
+    ],
+}
 
 
 @app.route("/api/songs")
 def get_songs():
     query = (request.args.get("q") or "").strip()
     category = (request.args.get("category") or "all").lower()
+    page = int(request.args.get("page") or 1)
+    source = (request.args.get("source") or "auto").lower()
 
     if query:
-        songs = fetch_from_saavn(query, limit=24)
-        if not songs:
-            songs = fetch_from_itunes(query, lang_tag="all", limit=24)
-        return jsonify({"songs": songs})
+        if source == "youtube":
+            songs = fetch_youtube_full_songs(query, limit=18)
+        else:
+            songs = fetch_official_full_songs(query, page=page, limit=30)
+            # If searching for a rare global remix or underground track, append YouTube Music results
+            if len(songs) < 8 and page == 1:
+                songs.extend(fetch_youtube_full_songs(query, limit=10))
+        return jsonify({"songs": songs, "page": page})
 
-    # Default curated Real Hindi & English Romantic Hits
-    if category == "hindi":
-        songs = fetch_from_saavn("Arijit Singh Romantic Hindi Hits", limit=20)
-        if not songs:
-            songs = fetch_from_itunes("Arijit Singh Pritam Romantic Hindi", lang_tag="hindi", limit=20)
-    elif category == "english":
-        songs = fetch_from_saavn("The Weeknd Ed Sheeran Taylor Swift Romantic", limit=20)
-        if not songs:
-            songs = fetch_from_itunes("Ed Sheeran The Weeknd Taylor Swift Love", lang_tag="english", limit=20)
-    else:
-        hindi_hits = fetch_from_saavn("Arijit Singh Kesariya Tum Hi Ho Apna Bana Le", limit=12)
-        if not hindi_hits:
-            hindi_hits = fetch_from_itunes("Arijit Singh Shreya Ghoshal Romantic", lang_tag="hindi", limit=12)
+    queries = CATEGORY_QUERIES.get(category, CATEGORY_QUERIES["all"])
+    seen_ids = set()
+    combined_songs = []
 
-        english_hits = fetch_from_saavn("Ed Sheeran Perfect Die With A Smile Until I Found You", limit=12)
-        if not english_hits:
-            english_hits = fetch_from_itunes("Bruno Mars The Weeknd Lana Del Rey", lang_tag="english", limit=12)
+    for q in queries:
+        batch = fetch_official_full_songs(q, page=page, limit=16)
+        for track in batch:
+            if track["id"] not in seen_ids:
+                seen_ids.add(track["id"])
+                combined_songs.append(track)
 
-        songs = hindi_hits + english_hits
-
-    return jsonify({"songs": songs})
+    return jsonify({"songs": combined_songs, "page": page})
 
 
 @app.route("/api/download")
 def download_audio():
-    """Streams real song file to the user's device as a downloadable attachment."""
+    """Downloads the full-length 320kbps song file to the user's device."""
     url = request.args.get("url")
-    title = request.args.get("title", "VelvetSync_Song").replace(" ", "_")
+    title = request.args.get("title", "VelvetSync_Full_Song").replace(" ", "_")
     if not url:
         return "Missing audio URL", 400
 
     try:
-        r = requests.get(url, stream=True, timeout=15)
-        ext = "m4a" if ".m4a" in url or ".mp4" in url else "mp3"
+        # Handle relative YouTube stream endpoints
+        if url.startswith("/api/yt_stream/"):
+            vid_id = url.split("/")[-1]
+            ydl_opts = {"format": "bestaudio[ext=m4a]/bestaudio/best", "quiet": True}
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(f"https://www.youtube.com/watch?v={vid_id}", download=False)
+                url = info.get("url")
+
+        r = requests.get(url, stream=True, headers=HTTP_HEADERS, timeout=25)
+        ext = "m4a" if ".mp4" in url or ".m4a" in url else "mp3"
         headers = {
             "Content-Disposition": f'attachment; filename="{title}.{ext}"',
-            "Content-Type": r.headers.get("Content-Type", "audio/mpeg"),
+            "Content-Type": r.headers.get("Content-Type", "audio/mp4"),
         }
-        return Response(r.iter_content(chunk_size=8192), headers=headers)
+        return Response(r.iter_content(chunk_size=16384), headers=headers)
     except Exception as e:
         return str(e), 500
 
