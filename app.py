@@ -1,9 +1,12 @@
-from flask import Flask, render_template, request
+import os
+from flask import Flask, render_template
 from flask_socketio import SocketIO, emit, join_room
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "velvetsync-secret"
-socketio = SocketIO(app, cors_allowed_origins="*")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "velvetsync-secret-key")
+
+# Threading mode + simple-websocket works reliably on Railway
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 @app.route("/")
 def index():
@@ -13,13 +16,22 @@ def index():
 def handle_join(data):
     room = data.get("room")
     mode = data.get("mode", "duo")
-    join_room(room)
-    emit("room_status", {"room": room, "mode": mode, "status": "Partner Connected"}, to=room)
+    if room:
+        join_room(room)
+        emit(
+            "room_joined",
+            {"room": room, "mode": mode},
+            to=room,
+            include_self=False
+        )
 
 @socketio.on("sync_action")
 def handle_sync_action(data):
     room = data.get("room")
-    emit("sync_update", data, to=room, include_self=False)
+    if room:
+        # Broadcast Play, Pause, or Seek to everyone else in the Duo/Trio room
+        emit("sync_update", data, to=room, include_self=False)
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
