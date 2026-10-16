@@ -1,5 +1,121 @@
 /* =========================================================================
-   1. AUTOMATIC COUPLE BACKGROUND SLIDESHOW (PINTEREST / ROMANTIC AESTHETIC)
+   1. REAL USER AUTHENTICATION (LOGIN / REGISTER)
+   ========================================================================= */
+let currentUser = null;
+
+function switchAuthTab(mode) {
+  const loginForm = document.getElementById("loginForm");
+  const regForm = document.getElementById("registerForm");
+  document.getElementById("authError").textContent = "";
+
+  if (mode === "login") {
+    loginForm.style.display = "block";
+    regForm.style.display = "none";
+    document.getElementById("tabLoginBtn").classList.add("active");
+    document.getElementById("tabRegisterBtn").classList.remove("active");
+  } else {
+    loginForm.style.display = "none";
+    regForm.style.display = "block";
+    document.getElementById("tabRegisterBtn").classList.add("active");
+    document.getElementById("tabLoginBtn").classList.remove("active");
+  }
+}
+
+async function checkLoggedInUser() {
+  try {
+    const res = await fetch("/api/me");
+    const data = await res.json();
+    if (data.user) {
+      applyAuthenticatedUser(data.user);
+    }
+  } catch (e) {
+    console.error("Session check error:", e);
+  }
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+
+  const res = await fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    document.getElementById("authError").textContent = data.error || "Login failed.";
+    return;
+  }
+  applyAuthenticatedUser(data.user);
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const name = document.getElementById("regName").value.trim();
+  const email = document.getElementById("regEmail").value.trim();
+  const password = document.getElementById("regPassword").value;
+  const avatar = document.getElementById("regAvatar").value.trim();
+
+  const res = await fetch("/api/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, password, avatar })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    document.getElementById("authError").textContent = data.error || "Registration failed.";
+    return;
+  }
+  applyAuthenticatedUser(data.user);
+}
+
+async function handleLogout() {
+  await fetch("/api/logout", { method: "POST" });
+  currentUser = null;
+  document.getElementById("authOverlay").classList.remove("hidden");
+}
+
+function applyAuthenticatedUser(user) {
+  currentUser = user;
+  document.getElementById("authOverlay").classList.add("hidden");
+  document.getElementById("headerUserName").textContent = user.name;
+  document.getElementById("headerUserAvatar").src = user.avatar;
+
+  renderRoomMembers([user]);
+
+  // If user opened a shared Duo or Trio Link, join the room automatically after login
+  const params = new URLSearchParams(window.location.search);
+  const room = params.get("room");
+  const mode = params.get("mode") || "duo";
+  if (room) {
+    switchSection(mode, document.querySelectorAll(".nav-btn")[mode === "duo" ? 1 : 2]);
+    activateRoomExperience(room, mode);
+  }
+}
+
+function renderRoomMembers(members) {
+  const duoRow = document.getElementById("duoMembersRow");
+  const trioRow = document.getElementById("trioMembersRow");
+
+  const memberHTML = members
+    .map(
+      (m) => `
+      <div class="avatar-circle">
+        <img src="${m.avatar}" alt="${m.name}" />
+        <span>${m.name}</span>
+      </div>
+    `
+    )
+    .join('<div class="sync-pulse-icon">💞</div>');
+
+  if (duoRow) duoRow.innerHTML = memberHTML;
+  if (trioRow) trioRow.innerHTML = memberHTML;
+}
+
+/* =========================================================================
+   2. AUTOMATIC COUPLE BACKGROUND SLIDESHOW (PINTEREST / ROMANTIC AESTHETIC)
    ========================================================================= */
 const coupleWallpapers = [
   "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=1600&auto=format&fit=crop&q=80",
@@ -52,139 +168,82 @@ function updateBgSpeed(sec) {
 }
 
 /* =========================================================================
-   2. BUILT-IN FREE SONGS + REAL-TIME AUDIO & FX ENGINE
+   3. REAL HINDI & ENGLISH SONGS ENGINE (NO DEMO TRACKS)
    ========================================================================= */
-const songs = [
-  {
-    id: 1,
-    title: "Sakura Midnight Promise",
-    artist: "VelvetSync Originals",
-    cover: "https://images.unsplash.com/photo-1522383225653-ed111181a951?w=600&auto=format&fit=crop&q=80",
-    couple: true,
-    liked: true,
-    tempo: 88,
-    lyric: "🌸 Under the falling cherry blossoms, every heartbeat stays in sync with yours...",
-    notes: [261.63, 329.63, 392.00, 523.25, 392.00, 329.63],
-    audioUrl: null
-  },
-  {
-    id: 2,
-    title: "Two Hearts Under Neon",
-    artist: "Toxic x Akshu Sessions",
-    cover: "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600&auto=format&fit=crop&q=80",
-    couple: true,
-    liked: true,
-    tempo: 96,
-    lyric: "💞 Distance means nothing when the same melody plays in both our ears tonight...",
-    notes: [293.66, 369.99, 440.00, 587.33, 440.00, 369.99],
-    audioUrl: null
-  },
-  {
-    id: 3,
-    title: "Velvet Rain & Coffee",
-    artist: "Lo-Fi Couple Collective",
-    cover: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=600&auto=format&fit=crop&q=80",
-    couple: true,
-    liked: false,
-    tempo: 78,
-    lyric: "☕ Warm coffee, rain on the windowpane, and your hand in mine...",
-    notes: [220.00, 261.63, 329.63, 440.00, 329.63, 261.63],
-    audioUrl: null
-  },
-  {
-    id: 4,
-    title: "Golden Hour Silhouette",
-    artist: "Sunset Dreamers",
-    cover: "https://images.unsplash.com/photo-1494774157365-9e04c6720e47?w=600&auto=format&fit=crop&q=80",
-    couple: true,
-    liked: false,
-    tempo: 92,
-    lyric: "✨ Chasing sunsets together where the sky turns gold and crimson...",
-    notes: [349.23, 440.00, 523.25, 698.46, 523.25, 440.00],
-    audioUrl: null
-  },
-  {
-    id: 5,
-    title: "Starlight Highway (Trio Mix)",
-    artist: "Night Drive Crew",
-    cover: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80",
-    couple: false,
-    liked: false,
-    tempo: 112,
-    lyric: "🥂 Windows down, city lights blurring past on the midnight highway...",
-    notes: [329.63, 392.00, 493.88, 659.25, 493.88, 392.00],
-    audioUrl: null
-  },
-  {
-    id: 6,
-    title: "Cherry Blossom Breeze",
-    artist: "Kyoto Acoustic Duo",
-    cover: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&auto=format&fit=crop&q=80",
-    couple: true,
-    liked: true,
-    tempo: 84,
-    lyric: "🌸 Soft acoustic whispers carried across the spring breeze for two...",
-    notes: [246.94, 311.13, 369.99, 493.88, 369.99, 311.13],
-    audioUrl: null
-  }
-];
-
+let songs = [];
+let likedSongIds = new Set();
 let currentIndex = 0;
 let isPlaying = false;
 let isLooping = false;
-let currentProgress = 0;
-let progressInterval = null;
-let masterVolume = 0.8;
+let playbackRate = 1.0;
 
-// Audio FX State
-let pitchMultiplier = 1.0;
-let tempoMultiplier = 1.0;
-let is8DEnabled = false;
-let pannerInterval = null;
+const htmlAudio = new Audio();
+htmlAudio.preload = "auto";
+
+// Web Audio API Context for Rain Layer & Visualizer
+let audioCtx = null;
 let rainNode = null;
 let sleepTimeout = null;
 
-// Web Audio API Context
-let audioCtx = null;
-let analyser = null;
-let gainNode = null;
-let filterNode = null;
-let pannerNode = null;
-let synthInterval = null;
-let htmlAudio = new Audio();
-htmlAudio.crossOrigin = "anonymous";
+async function loadSongCategory(category = "all") {
+  const loader = document.getElementById("loadingIndicator");
+  if (loader) loader.style.display = "inline";
 
-function initAudioEngine() {
-  if (audioCtx) return;
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  audioCtx = new AudioContext();
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 128;
+  const headingMap = {
+    all: "Trending Real Hindi & English Hits",
+    hindi: "🇮🇳 Real Hindi Romantic Hits",
+    english: "🌎 Real English Chartbusters"
+  };
+  document.getElementById("catalogHeading").textContent = headingMap[category] || headingMap.all;
 
-  filterNode = audioCtx.createBiquadFilter();
-  filterNode.type = "lowpass";
-  filterNode.frequency.value = 18000;
+  try {
+    const res = await fetch(`/api/songs?category=${encodeURIComponent(category)}`);
+    const data = await res.json();
+    if (data.songs && data.songs.length > 0) {
+      songs = data.songs.map((s) => ({
+        ...s,
+        liked: likedSongIds.has(s.id)
+      }));
+      renderSongs();
+    }
+  } catch (err) {
+    console.error("Failed to fetch real songs:", err);
+  } finally {
+    if (loader) loader.style.display = "none";
+  }
+}
 
-  pannerNode = audioCtx.createStereoPanner();
-  gainNode = audioCtx.createGain();
-  gainNode.gain.value = masterVolume;
+async function searchRealSongs() {
+  const query = document.getElementById("searchInput").value.trim();
+  if (!query) {
+    loadSongCategory("all");
+    return;
+  }
 
-  filterNode.connect(pannerNode);
-  pannerNode.connect(gainNode);
-  gainNode.connect(analyser);
-  analyser.connect(audioCtx.destination);
+  const loader = document.getElementById("loadingIndicator");
+  if (loader) loader.style.display = "inline";
+  document.getElementById("catalogHeading").textContent = `Search Results for "${query}"`;
 
-  drawFrequencyVisualizer();
+  try {
+    const res = await fetch(`/api/songs?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    songs = (data.songs || []).map((s) => ({
+      ...s,
+      liked: likedSongIds.has(s.id)
+    }));
+    renderSongs();
+  } catch (err) {
+    console.error("Search failed:", err);
+  } finally {
+    if (loader) loader.style.display = "none";
+  }
 }
 
 function playSong(index, broadcast = true) {
-  initAudioEngine();
-  if (audioCtx.state === "suspended") audioCtx.resume();
-
+  if (!songs[index]) return;
   currentIndex = index;
   const track = songs[currentIndex];
   isPlaying = true;
-  currentProgress = 0;
 
   // Update Player & Spinning Vinyl UI
   document.getElementById("playerArt").src = track.cover;
@@ -194,91 +253,70 @@ function playSong(index, broadcast = true) {
   document.getElementById("playerArtist").textContent = track.artist;
   document.getElementById("playPauseBtn").textContent = "⏸";
   document.getElementById("favBtn").classList.toggle("active", !!track.liked);
-  document.getElementById("lyricTicker").textContent = track.lyric || `♫ Now Playing: ${track.title} — ${track.artist}`;
+  document.getElementById("lyricTicker").textContent = `♫ Now Streaming: ${track.title} — ${track.artist} (${(track.language || "Music").toUpperCase()})`;
 
-  stopAudioPlayback();
-
-  if (track.audioUrl) {
-    htmlAudio.src = track.audioUrl;
-    htmlAudio.loop = isLooping;
-    htmlAudio.volume = masterVolume;
-    htmlAudio.playbackRate = tempoMultiplier;
-    htmlAudio.play();
-  } else {
-    startPolyphonicTrack(track);
+  htmlAudio.src = track.audioUrl;
+  htmlAudio.loop = isLooping;
+  htmlAudio.playbackRate = playbackRate;
+  if ("preservesPitch" in htmlAudio) {
+    htmlAudio.preservesPitch = playbackRate === 1.0;
   }
 
-  startProgressCounter();
+  htmlAudio.play().catch((err) => console.warn("Playback interaction needed:", err));
   renderSongs();
 
-  if (broadcast) broadcastSyncState("PLAY", { index: currentIndex, progress: 0 });
+  if (broadcast) {
+    broadcastSyncState("PLAY_TRACK", { track, currentTime: 0 });
+  }
 }
 
-function startPolyphonicTrack(track) {
-  let step = 0;
-  const effectiveTempo = track.tempo * tempoMultiplier;
-  const beatMs = (60 / effectiveTempo) * 500;
-
-  synthInterval = setInterval(() => {
-    if (!isPlaying) return;
-    const freq = track.notes[step % track.notes.length] * pitchMultiplier;
-
-    const osc = audioCtx.createOscillator();
-    const noteGain = audioCtx.createGain();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
-    if (step % 2 === 0) {
-      const subOsc = audioCtx.createOscillator();
-      const subGain = audioCtx.createGain();
-      subOsc.type = "sine";
-      subOsc.frequency.setValueAtTime(freq / 2, audioCtx.currentTime);
-      subGain.gain.setValueAtTime(0.18, audioCtx.currentTime);
-      subGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.85);
-      subOsc.connect(subGain);
-      subGain.connect(filterNode);
-      subOsc.start();
-      subOsc.stop(audioCtx.currentTime + 0.85);
-    }
-
-    noteGain.gain.setValueAtTime(0.24, audioCtx.currentTime);
-    noteGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.7);
-
-    osc.connect(noteGain);
-    noteGain.connect(filterNode);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.7);
-
-    step++;
-  }, beatMs);
-}
-
-function stopAudioPlayback() {
-  if (synthInterval) clearInterval(synthInterval);
-  htmlAudio.pause();
+function playSyncedTrack(track, seekTime = 0) {
+  // Check if track already exists in list; otherwise insert it at the top
+  let idx = songs.findIndex((s) => s.id === track.id);
+  if (idx === -1) {
+    songs.unshift(track);
+    idx = 0;
+  }
+  playSong(idx, false);
+  if (seekTime > 0) {
+    htmlAudio.currentTime = seekTime;
+  }
 }
 
 function togglePlay(broadcast = true) {
-  initAudioEngine();
-  if (!isPlaying) {
-    playSong(currentIndex, false);
+  if (!htmlAudio.src && songs.length > 0) {
+    playSong(0, broadcast);
+    return;
+  }
+
+  if (htmlAudio.paused) {
+    htmlAudio.play();
+    isPlaying = true;
+    document.getElementById("playPauseBtn").textContent = "⏸";
+    document.getElementById("vinylDisc").classList.add("spinning");
   } else {
+    htmlAudio.pause();
     isPlaying = false;
-    stopAudioPlayback();
-    if (progressInterval) clearInterval(progressInterval);
     document.getElementById("playPauseBtn").textContent = "▶";
     document.getElementById("vinylDisc").classList.remove("spinning");
-    renderSongs();
   }
-  if (broadcast) broadcastSyncState(isPlaying ? "PLAY" : "PAUSE", { index: currentIndex, progress: currentProgress });
+
+  renderSongs();
+  if (broadcast) {
+    broadcastSyncState(isPlaying ? "RESUME" : "PAUSE", {
+      currentTime: htmlAudio.currentTime
+    });
+  }
 }
 
 function prevSong() {
+  if (!songs.length) return;
   const nextIdx = (currentIndex - 1 + songs.length) % songs.length;
   playSong(nextIdx);
 }
 
 function nextSong() {
+  if (!songs.length) return;
   const nextIdx = (currentIndex + 1) % songs.length;
   playSong(nextIdx);
 }
@@ -290,93 +328,72 @@ function toggleLoop() {
 }
 
 function setVolume(val) {
-  masterVolume = parseFloat(val);
-  if (gainNode) gainNode.gain.value = masterVolume;
-  htmlAudio.volume = masterVolume;
+  htmlAudio.volume = parseFloat(val);
 }
 
-function startProgressCounter() {
-  if (progressInterval) clearInterval(progressInterval);
-  progressInterval = setInterval(() => {
-    if (!isPlaying) return;
-    currentProgress += 1;
-    if (currentProgress >= 100) {
-      if (isLooping) {
-        currentProgress = 0;
-      } else {
-        nextSong();
-        return;
-      }
-    }
-    document.getElementById("seekBar").value = currentProgress;
-    const totalSec = Math.floor((currentProgress / 100) * 150);
-    const mins = Math.floor(totalSec / 60);
-    const secs = String(totalSec % 60).padStart(2, "0");
-    document.getElementById("curTime").textContent = `${mins}:${secs}`;
-  }, 1500);
+function formatTime(sec) {
+  if (!sec || isNaN(sec)) return "0:00";
+  const m = Math.floor(sec / 60);
+  const s = String(Math.floor(sec % 60)).padStart(2, "0");
+  return `${m}:${s}`;
 }
 
-function seekSong(val) {
-  currentProgress = Number(val);
-  broadcastSyncState("SEEK", { index: currentIndex, progress: currentProgress });
+htmlAudio.addEventListener("timeupdate", () => {
+  if (!htmlAudio.duration) return;
+  const pct = (htmlAudio.currentTime / htmlAudio.duration) * 100;
+  document.getElementById("seekBar").value = pct;
+  document.getElementById("curTime").textContent = formatTime(htmlAudio.currentTime);
+  document.getElementById("durTime").textContent = formatTime(htmlAudio.duration);
+});
+
+htmlAudio.addEventListener("ended", () => {
+  if (!isLooping) nextSong();
+});
+
+function seekSong(pct) {
+  if (!htmlAudio.duration) return;
+  const targetTime = (Number(pct) / 100) * htmlAudio.duration;
+  htmlAudio.currentTime = targetTime;
+  broadcastSyncState("SEEK", { currentTime: targetTime });
 }
 
 /* =========================================================================
-   3. NEW: SLOWED + REVERB, NIGHTCORE, 8D SURROUND & RAIN AMBIENCE
+   4. REAL VOCAL SLOWED + REVERB, NIGHTCORE & RAIN AMBIENCE
    ========================================================================= */
 let activeVibe = "normal";
 
 function setAudioVibe(vibe) {
-  initAudioEngine();
   const slowedBtn = document.getElementById("slowedBtn");
   const nightcoreBtn = document.getElementById("nightcoreBtn");
 
   if (activeVibe === vibe) {
     activeVibe = "normal";
-    pitchMultiplier = 1.0;
-    tempoMultiplier = 1.0;
-    filterNode.frequency.value = 18000;
+    playbackRate = 1.0;
     slowedBtn.classList.remove("active");
     nightcoreBtn.classList.remove("active");
   } else if (vibe === "slowed") {
     activeVibe = "slowed";
-    pitchMultiplier = 0.82;
-    tempoMultiplier = 0.82;
-    filterNode.frequency.value = 1600; // Warm dreamy low-pass filter
+    playbackRate = 0.84;
     slowedBtn.classList.add("active");
     nightcoreBtn.classList.remove("active");
   } else if (vibe === "nightcore") {
     activeVibe = "nightcore";
-    pitchMultiplier = 1.25;
-    tempoMultiplier = 1.25;
-    filterNode.frequency.value = 18000;
+    playbackRate = 1.22;
     nightcoreBtn.classList.add("active");
     slowedBtn.classList.remove("active");
   }
 
-  if (isPlaying) playSong(currentIndex, false);
-}
-
-function toggle8DAudio() {
-  initAudioEngine();
-  is8DEnabled = !is8DEnabled;
-  document.getElementById("surroundBtn").classList.toggle("active", is8DEnabled);
-  document.getElementById("status8D").textContent = is8DEnabled ? "ON" : "Off";
-
-  if (pannerInterval) clearInterval(pannerInterval);
-  if (is8DEnabled) {
-    let angle = 0;
-    pannerInterval = setInterval(() => {
-      angle += 0.08;
-      if (pannerNode) pannerNode.pan.setValueAtTime(Math.sin(angle), audioCtx.currentTime);
-    }, 60);
-  } else if (pannerNode) {
-    pannerNode.pan.setValueAtTime(0, audioCtx.currentTime);
+  htmlAudio.playbackRate = playbackRate;
+  if ("preservesPitch" in htmlAudio) {
+    htmlAudio.preservesPitch = playbackRate === 1.0;
   }
 }
 
 function toggleRainAmbience() {
-  initAudioEngine();
+  if (!audioCtx) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+  }
   const btn = document.getElementById("rainBtn");
   const label = document.getElementById("statusRain");
 
@@ -389,7 +406,6 @@ function toggleRainAmbience() {
     return;
   }
 
-  // Synthesize cozy pink-noise rain
   const bufferSize = audioCtx.sampleRate * 2;
   const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
   const output = noiseBuffer.getChannelData(0);
@@ -403,10 +419,10 @@ function toggleRainAmbience() {
 
   const rainFilter = audioCtx.createBiquadFilter();
   rainFilter.type = "lowpass";
-  rainFilter.frequency.value = 950;
+  rainFilter.frequency.value = 900;
 
   rainNode.connect(rainFilter);
-  rainFilter.connect(gainNode);
+  rainFilter.connect(audioCtx.destination);
   rainNode.start();
 
   btn.classList.add("active");
@@ -419,71 +435,27 @@ function setSleepTimer(minutes) {
   if (mins > 0) {
     sleepTimeout = setTimeout(() => {
       if (isPlaying) togglePlay();
-      alert("🌙 Sleep Timer finished. Sweet dreams!");
+      alert("🌙 Sleep Timer finished. Goodnight!");
     }, mins * 60 * 1000);
   }
 }
 
 /* =========================================================================
-   4. DOWNLOAD SONG GENERATOR (REAL WAV AUDIO EXPORT)
+   5. REAL AUDIO FILE DOWNLOAD
    ========================================================================= */
 function downloadCurrentSong() {
   const track = songs[currentIndex];
-  if (track.audioUrl) {
-    const a = document.createElement("a");
-    a.href = track.audioUrl;
-    a.download = `${track.title}.mp3`;
-    a.click();
-    return;
-  }
-
-  const sampleRate = 44100;
-  const durationSeconds = 8;
-  const numSamples = sampleRate * durationSeconds;
-  const buffer = new ArrayBuffer(44 + numSamples * 2);
-  const view = new DataView(buffer);
-
-  const writeStr = (offset, str) => {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-  };
-
-  writeStr(0, "RIFF");
-  view.setUint32(4, 36 + numSamples * 2, true);
-  writeStr(8, "WAVE");
-  writeStr(12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeStr(36, "data");
-  view.setUint32(40, numSamples * 2, true);
-
-  for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate;
-    const noteIdx = Math.floor(t * 2) % track.notes.length;
-    const freq = track.notes[noteIdx] * pitchMultiplier;
-    const env = Math.exp(-3 * ((t * 2) % 1));
-    const sample = Math.sin(2 * Math.PI * freq * t) * env * 0.4;
-    view.setInt16(44 + i * 2, sample * 32767, true);
-  }
-
-  const blob = new Blob([buffer], { type: "audio/wav" });
-  const url = URL.createObjectURL(blob);
+  if (!track || !track.audioUrl) return;
+  const downloadUrl = `/api/download?url=${encodeURIComponent(track.audioUrl)}&title=${encodeURIComponent(track.title)}`;
   const a = document.createElement("a");
-  a.href = url;
-  a.download = `${track.title.replace(/\s+/g, "_")}_VelvetSync.wav`;
+  a.href = downloadUrl;
   a.click();
-  URL.revokeObjectURL(url);
 }
 
 /* =========================================================================
-   5. REAL-TIME DUO & TRIO LINK SYNCHRONIZATION (RAILWAY SOCKET.IO + LOCAL)
+   6. REAL-TIME DUO & TRIO LINK SYNCHRONIZATION (SOCKET.IO)
    ========================================================================= */
 const socket = typeof io !== "undefined" ? io() : null;
-const localChannel = new BroadcastChannel("velvetsync_realtime_room");
 let activeRoomId = null;
 
 function createSyncRoom(mode) {
@@ -502,11 +474,15 @@ function createSyncRoom(mode) {
 
 function activateRoomExperience(roomCode, mode) {
   activeRoomId = roomCode;
-  const username = document.getElementById("myNickname")?.value || "Toxic";
-  document.getElementById("syncStatusText").textContent = `${mode.toUpperCase()} Live Room: ${roomCode}`;
+  document.getElementById("syncStatusText").textContent = `${mode.toUpperCase()} Live: ${roomCode}`;
+
+  const userPayload = currentUser || {
+    name: "Listener",
+    avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Listener"
+  };
 
   if (socket) {
-    socket.emit("join_sync_room", { room: roomCode, mode, username });
+    socket.emit("join_sync_room", { room: roomCode, mode, user: userPayload });
   }
   toggleVideoBackground(true);
 }
@@ -516,45 +492,49 @@ function copyRoomLink(inputId) {
   if (!input.value) return;
   input.select();
   navigator.clipboard.writeText(input.value);
-  alert("Invite Link Copied! Send it to your partner to start synchronized playback.");
+  alert("Invite Link Copied! Send it to your partner or friends to stream in real-time sync.");
 }
 
 function broadcastSyncState(action, payload) {
-  if (!activeRoomId) return;
-  const packet = { room: activeRoomId, action, payload };
-  if (socket) socket.emit("sync_action", packet);
-  localChannel.postMessage(packet);
-}
-
-function handleIncomingSync(data) {
-  const { room, action, payload } = data;
-  if (room !== activeRoomId) return;
-
-  if (action === "PLAY") {
-    playSong(payload.index, false);
-  } else if (action === "PAUSE") {
-    if (isPlaying) togglePlay(false);
-  } else if (action === "SEEK") {
-    currentProgress = payload.progress;
-    document.getElementById("seekBar").value = currentProgress;
-  } else if (action === "WALLPAPER") {
-    coupleWallpapers.unshift(payload.url);
-    applyBackground(payload.url);
-  } else if (action === "THEME") {
-    setTheme(payload.theme, false);
-  } else if (action === "VIDEO_URL") {
-    changeCoupleVideo(payload.url, false);
-  }
+  if (!activeRoomId || !socket) return;
+  socket.emit("sync_action", { room: activeRoomId, action, payload });
 }
 
 if (socket) {
   socket.on("room_joined", (data) => {
-    document.getElementById("syncStatusText").textContent = `💞 Synced (${data.room}) • ${data.members.join(" & ")}`;
+    const names = data.members.map((m) => m.name).join(" & ");
+    document.getElementById("syncStatusText").textContent = `💞 Synced (${data.room}) • ${names}`;
+    renderRoomMembers(data.members);
     toggleVideoBackground(true);
-    playSong(currentIndex, true);
+
+    // Sync current playing track when partner joins
+    if (songs[currentIndex]) {
+      playSong(currentIndex, true);
+    }
   });
 
-  socket.on("sync_update", handleIncomingSync);
+  socket.on("sync_update", (data) => {
+    const { room, action, payload } = data;
+    if (room !== activeRoomId) return;
+
+    if (action === "PLAY_TRACK") {
+      playSyncedTrack(payload.track, payload.currentTime || 0);
+    } else if (action === "PAUSE") {
+      if (!htmlAudio.paused) togglePlay(false);
+    } else if (action === "RESUME") {
+      htmlAudio.currentTime = payload.currentTime || htmlAudio.currentTime;
+      if (htmlAudio.paused) togglePlay(false);
+    } else if (action === "SEEK") {
+      htmlAudio.currentTime = payload.currentTime;
+    } else if (action === "WALLPAPER") {
+      coupleWallpapers.unshift(payload.url);
+      applyBackground(payload.url);
+    } else if (action === "THEME") {
+      setTheme(payload.theme, false);
+    } else if (action === "VIDEO_URL") {
+      changeCoupleVideo(payload.url, false);
+    }
+  });
 
   socket.on("receive_chat", (data) => {
     appendChatMessage(data.user, data.text);
@@ -564,8 +544,6 @@ if (socket) {
     spawnEmojiBurst(data.emoji);
   });
 }
-
-localChannel.onmessage = (e) => handleIncomingSync(e.data);
 
 function toggleVideoBackground(enable) {
   const vid = document.getElementById("coupleVideoBg");
@@ -587,18 +565,18 @@ function changeCoupleVideo(url, sync = true) {
 }
 
 /* =========================================================================
-   6. LIVE COUPLE CHAT & FLOATING REACTION BURSTS
+   7. LIVE ROOM CHAT & FLOATING REACTION BURSTS
    ========================================================================= */
 function sendChatMessage() {
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text) return;
-  const user = document.getElementById("myNickname")?.value || "Toxic";
+  const userName = currentUser ? currentUser.name : "Listener";
 
   if (socket && activeRoomId) {
-    socket.emit("send_chat", { room: activeRoomId, user, text });
+    socket.emit("send_chat", { room: activeRoomId, user: userName, text });
   } else {
-    appendChatMessage(user, text);
+    appendChatMessage(userName, text);
   }
   input.value = "";
 }
@@ -633,7 +611,7 @@ function spawnEmojiBurst(emoji) {
 }
 
 /* =========================================================================
-   7. FALLING SAKURA CHERRY BLOSSOM PETALS CANVAS
+   8. FALLING SAKURA CHERRY BLOSSOM PETALS CANVAS
    ========================================================================= */
 const sakuraCanvas = document.getElementById("sakuraCanvas");
 const sCtx = sakuraCanvas.getContext("2d");
@@ -694,33 +672,30 @@ function toggleSakura() {
 }
 
 /* =========================================================================
-   8. REAL-TIME FREQUENCY VISUALIZER & UI RENDERING
+   9. ANIMATED FREQUENCY VISUALIZER & UI RENDERING
    ========================================================================= */
-function drawFrequencyVisualizer() {
+function startFooterVisualizer() {
   const canvas = document.getElementById("freqCanvas");
   const ctx = canvas.getContext("2d");
-  const bufferLength = analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufferLength);
 
-  function renderFrame() {
-    requestAnimationFrame(renderFrame);
-    analyser.getByteFrequencyData(dataArray);
+  function renderBars() {
+    requestAnimationFrame(renderBars);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const barWidth = (canvas.width / 24) - 2;
+    const barWidth = (canvas.width / 22) - 2;
     let x = 2;
-    for (let i = 0; i < 24; i++) {
-      const barHeight = Math.max(4, (dataArray[i] / 255) * canvas.height);
+    for (let i = 0; i < 22; i++) {
+      const h = isPlaying
+        ? 6 + Math.abs(Math.sin(Date.now() * 0.008 + i * 0.5)) * (canvas.height - 10)
+        : 4;
       ctx.fillStyle = "#ff4d8d";
-      ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+      ctx.fillRect(x, canvas.height - h, barWidth, h);
       x += barWidth + 2;
     }
   }
-  renderFrame();
+  renderBars();
 }
 
 function renderSongs() {
-  const query = document.getElementById("searchInput").value.toLowerCase();
   const discoverGrid = document.getElementById("discoverGrid");
   const coupleGrid = document.getElementById("coupleGrid");
   const favGrid = document.getElementById("favGrid");
@@ -728,10 +703,12 @@ function renderSongs() {
   const createCardHTML = (song, idx) => {
     const activeClass = idx === currentIndex && isPlaying ? "playing" : "";
     const heartColor = song.liked ? "var(--primary)" : "var(--text-muted)";
+    const badge = (song.language || "music").toUpperCase();
     return `
       <div class="song-card ${activeClass}" onclick="playSong(${idx})">
         <div class="art-wrapper">
-          <img src="${song.cover}" alt="${song.title}" />
+          <img src="${song.cover}" alt="${song.title}" loading="lazy" />
+          <span class="lang-tag">${badge}</span>
           <div class="card-visualizer">
             <div class="bar"></div>
             <div class="bar"></div>
@@ -740,26 +717,20 @@ function renderSongs() {
           </div>
         </div>
         <div class="song-title">
-          <span>${song.title}</span>
+          <span title="${song.title}">${song.title}</span>
           <span style="color:${heartColor};" onclick="toggleCardLike(event, ${idx})">♥</span>
         </div>
-        <div class="song-artist">${song.artist}</div>
+        <div class="song-artist" title="${song.artist}">${song.artist}</div>
       </div>
     `;
   };
 
-  discoverGrid.innerHTML = songs
-    .map((s, idx) => ({ s, idx }))
-    .filter(({ s }) => s.title.toLowerCase().includes(query) || s.artist.toLowerCase().includes(query))
-    .map(({ s, idx }) => createCardHTML(s, idx))
-    .join("");
-
-  coupleGrid.innerHTML = songs
-    .map((s, idx) => ({ s, idx }))
-    .filter(({ s }) => s.couple)
-    .map(({ s, idx }) => createCardHTML(s, idx))
-    .join("");
-
+  if (discoverGrid) {
+    discoverGrid.innerHTML = songs.map((s, idx) => createCardHTML(s, idx)).join("");
+  }
+  if (coupleGrid) {
+    coupleGrid.innerHTML = songs.map((s, idx) => createCardHTML(s, idx)).join("");
+  }
   if (favGrid) {
     favGrid.innerHTML = songs
       .map((s, idx) => ({ s, idx }))
@@ -771,14 +742,17 @@ function renderSongs() {
 
 function toggleCardLike(e, idx) {
   e.stopPropagation();
-  songs[idx].liked = !songs[idx].liked;
-  triggerFavHeart(e);
+  const track = songs[idx];
+  track.liked = !track.liked;
+  if (track.liked) likedSongIds.add(track.id);
+  else likedSongIds.delete(track.id);
+  triggerFavHeart(e, false);
   renderSongs();
 }
 
 function addNewSong() {
-  const title = document.getElementById("customTitle").value.trim() || "Untitled Romantic Track";
-  const artist = document.getElementById("customArtist").value.trim() || "Toxic & Akshu";
+  const title = document.getElementById("customTitle").value.trim() || "Custom Romantic Track";
+  const artist = document.getElementById("customArtist").value.trim() || (currentUser ? currentUser.name : "Artist");
   const directUrl = document.getElementById("customAudioUrl").value.trim();
   const fileInput = document.getElementById("customAudioFile");
 
@@ -786,17 +760,19 @@ function addNewSong() {
   if (!audioUrl && fileInput.files && fileInput.files[0]) {
     audioUrl = URL.createObjectURL(fileInput.files[0]);
   }
+  if (!audioUrl) {
+    alert("Please provide a direct MP3 URL or select an audio file.");
+    return;
+  }
 
   songs.unshift({
-    id: Date.now(),
+    id: `custom_${Date.now()}`,
     title,
     artist,
     cover: coupleWallpapers[bgIndex % coupleWallpapers.length],
+    language: "custom",
     couple: true,
     liked: true,
-    tempo: 90,
-    lyric: `💖 Custom Dedication: ${title} by ${artist}`,
-    notes: [261.63, 329.63, 392.00, 523.25],
     audioUrl
   });
 
@@ -823,8 +799,7 @@ function switchSection(sectionId, btn) {
 }
 
 function playCouplePlaylist() {
-  const firstCoupleIndex = songs.findIndex((s) => s.couple);
-  if (firstCoupleIndex !== -1) playSong(firstCoupleIndex);
+  if (songs.length > 0) playSong(0);
 }
 
 function toggleWindow(winId) {
@@ -841,11 +816,15 @@ function setTheme(themeName, sync = false) {
   if (sync) broadcastSyncState("THEME", { theme: themeName });
 }
 
-function triggerFavHeart(e) {
-  songs[currentIndex].liked = !songs[currentIndex].liked;
-  const btn = document.getElementById("favBtn");
-  btn.classList.toggle("active", songs[currentIndex].liked);
-  renderSongs();
+function triggerFavHeart(e, toggleCurrent = true) {
+  if (toggleCurrent && songs[currentIndex]) {
+    const track = songs[currentIndex];
+    track.liked = !track.liked;
+    if (track.liked) likedSongIds.add(track.id);
+    else likedSongIds.delete(track.id);
+    document.getElementById("favBtn").classList.toggle("active", track.liked);
+    renderSongs();
+  }
 
   for (let i = 0; i < 6; i++) {
     const heart = document.createElement("div");
@@ -861,18 +840,9 @@ function triggerFavHeart(e) {
 // Initialize App on Load
 window.addEventListener("DOMContentLoaded", () => {
   startBgSlideshow(8);
-  renderSongs();
   sakuraCanvas.classList.add("active");
   animateSakura();
-
-  // Auto-join if opening a shared Duo or Trio Link
-  const params = new URLSearchParams(window.location.search);
-  const room = params.get("room");
-  const mode = params.get("mode") || "duo";
-  if (room) {
-    const nicknameInput = document.getElementById("myNickname");
-    if (nicknameInput) nicknameInput.value = "Akshu";
-    switchSection(mode, document.querySelectorAll(".nav-btn")[mode === "duo" ? 1 : 2]);
-    activateRoomExperience(room, mode);
-  }
+  startFooterVisualizer();
+  checkLoggedInUser();
+  loadSongCategory("all");
 });
