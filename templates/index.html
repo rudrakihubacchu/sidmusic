@@ -3,686 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VelvetSync — Couple & Trio Real-Time Music Sanctuary</title>
-  <style>
-    :root {
-      --primary: #ff4d8d;
-      --secondary: #ff85b3;
-      --accent: #ffb3d1;
-      --bg-glass: rgba(18, 12, 24, 0.68);
-      --card-glass: rgba(255, 255, 255, 0.08);
-      --border-glass: rgba(255, 255, 255, 0.16);
-      --text-main: #ffffff;
-      --text-muted: #d4c4d8;
-      --glow: 0 0 25px rgba(255, 77, 141, 0.45);
-    }
-
-    [data-theme="midnight"] {
-      --primary: #9d4edd;
-      --secondary: #c77dff;
-      --accent: #e0aaff;
-      --bg-glass: rgba(10, 8, 26, 0.75);
-      --glow: 0 0 25px rgba(157, 78, 221, 0.5);
-    }
-
-    [data-theme="golden"] {
-      --primary: #ff9e00;
-      --secondary: #ffaa00;
-      --accent: #ffd000;
-      --bg-glass: rgba(28, 18, 8, 0.72);
-      --glow: 0 0 25px rgba(255, 158, 0, 0.45);
-    }
-
-    [data-theme="crimson"] {
-      --primary: #e63946;
-      --secondary: #ff6b6b;
-      --accent: #ffb5a7;
-      --bg-glass: rgba(28, 8, 12, 0.75);
-      --glow: 0 0 25px rgba(230, 57, 70, 0.5);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    }
-
-    body {
-      background: #0b0710;
-      color: var(--text-main);
-      height: 100vh;
-      overflow: hidden;
-      position: relative;
-      user-select: none;
-    }
-
-    /* Dynamic Background Slideshow & Video Layers */
-    .bg-layer {
-      position: fixed;
-      inset: 0;
-      background-size: cover;
-      background-position: center;
-      transition: opacity 2.2s ease-in-out, transform 12s linear;
-      z-index: -4;
-      opacity: 0;
-      transform: scale(1.02);
-    }
-    .bg-layer.active {
-      opacity: 1;
-      transform: scale(1.08);
-    }
-
-    #coupleVideoBg {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      z-index: -3;
-      opacity: 0;
-      transition: opacity 1.5s ease;
-      pointer-events: none;
-      filter: brightness(0.65) saturate(1.2);
-    }
-    #coupleVideoBg.active {
-      opacity: 1;
-    }
-
-    .bg-overlay {
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(circle at center, rgba(15, 8, 22, 0.45) 0%, rgba(8, 4, 14, 0.85) 100%);
-      z-index: -2;
-      backdrop-filter: blur(4px);
-    }
-
-    /* Sakura Petal Canvas */
-    #sakuraCanvas {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: -1;
-      opacity: 0;
-      transition: opacity 1s ease;
-    }
-    #sakuraCanvas.active {
-      opacity: 1;
-    }
-
-    /* App Layout */
-    .app-shell {
-      display: grid;
-      grid-template-columns: 260px 1fr;
-      grid-template-rows: 1fr 105px;
-      height: 100vh;
-      gap: 14px;
-      padding: 14px;
-    }
-
-    /* Sidebar */
-    .sidebar {
-      background: var(--bg-glass);
-      border: 1px solid var(--border-glass);
-      border-radius: 22px;
-      padding: 22px 16px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 1.35rem;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      color: var(--text-main);
-      margin-bottom: 26px;
-      padding: 0 8px;
-    }
-    .brand-icon {
-      width: 38px;
-      height: 38px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      display: grid;
-      place-items: center;
-      box-shadow: var(--glow);
-      animation: pulseBeat 2s infinite;
-    }
-
-    @keyframes pulseBeat {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.08); }
-    }
-
-    .nav-menu {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .nav-btn {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      border-radius: 14px;
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-align: left;
-    }
-    .nav-btn:hover, .nav-btn.active {
-      background: var(--card-glass);
-      color: var(--text-main);
-      border-color: var(--border-glass);
-      box-shadow: var(--glow);
-      transform: translateX(4px);
-    }
-
-    /* Quick Floating Window Triggers */
-    .quick-toggles {
-      background: var(--card-glass);
-      border: 1px solid var(--border-glass);
-      border-radius: 16px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .quick-toggles h4 {
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--accent);
-    }
-    .toggle-chip {
-      padding: 9px 12px;
-      border-radius: 10px;
-      border: 1px solid var(--border-glass);
-      background: rgba(255, 255, 255, 0.05);
-      color: #fff;
-      cursor: pointer;
-      font-size: 0.84rem;
-      transition: 0.25s;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .toggle-chip:hover {
-      background: var(--primary);
-      border-color: var(--primary);
-    }
-
-    /* Main Content Viewport */
-    .main-view {
-      background: var(--bg-glass);
-      border: 1px solid var(--border-glass);
-      border-radius: 22px;
-      padding: 24px 28px;
-      backdrop-filter: blur(18px);
-      overflow-y: auto;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .search-box {
-      flex: 1;
-      max-width: 380px;
-      position: relative;
-    }
-    .search-box input {
-      width: 100%;
-      padding: 12px 18px;
-      border-radius: 99px;
-      border: 1px solid var(--border-glass);
-      background: rgba(255, 255, 255, 0.07);
-      color: #fff;
-      outline: none;
-      transition: 0.3s;
-    }
-    .search-box input:focus {
-      border-color: var(--primary);
-      box-shadow: var(--glow);
-    }
-
-    .status-pills {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .pill {
-      padding: 8px 15px;
-      border-radius: 99px;
-      background: var(--card-glass);
-      border: 1px solid var(--border-glass);
-      font-size: 0.83rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .dot-live {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #00f5d4;
-      box-shadow: 0 0 10px #00f5d4;
-    }
-
-    /* Section Containers */
-    .view-section {
-      display: none;
-      animation: fadeSlide 0.45s ease forwards;
-    }
-    .view-section.active {
-      display: block;
-    }
-    @keyframes fadeSlide {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Hero Banner */
-    .hero-banner {
-      border-radius: 20px;
-      padding: 26px;
-      background: linear-gradient(125deg, rgba(255, 77, 141, 0.28), rgba(20, 12, 32, 0.65));
-      border: 1px solid var(--border-glass);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 20px;
-      margin-bottom: 24px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .hero-info h1 {
-      font-size: 1.9rem;
-      margin-bottom: 8px;
-    }
-    .hero-info p {
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      max-width: 540px;
-      margin-bottom: 16px;
-    }
-
-    .btn-primary {
-      padding: 11px 22px;
-      border-radius: 99px;
-      border: none;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: #fff;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: var(--glow);
-      transition: 0.3s;
-    }
-    .btn-primary:hover {
-      transform: translateY(-2px) scale(1.02);
-    }
-
-    /* Song Grid */
-    .song-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
-      gap: 18px;
-    }
-
-    .song-card {
-      background: var(--card-glass);
-      border: 1px solid var(--border-glass);
-      border-radius: 18px;
-      padding: 14px;
-      transition: all 0.35s ease;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-    }
-    .song-card:hover {
-      transform: translateY(-6px);
-      border-color: var(--primary);
-      box-shadow: var(--glow);
-    }
-    .song-card.playing {
-      border-color: var(--primary);
-      background: rgba(255, 77, 141, 0.16);
-    }
-
-    .art-wrapper {
-      position: relative;
-      height: 155px;
-      border-radius: 13px;
-      overflow: hidden;
-      margin-bottom: 12px;
-    }
-    .art-wrapper img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.5s ease;
-    }
-    .song-card:hover .art-wrapper img {
-      transform: scale(1.09);
-    }
-
-    /* Per-Song Equalizer Animation Overlay */
-    .card-visualizer {
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.45);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      opacity: 0;
-      transition: 0.3s;
-    }
-    .song-card.playing .card-visualizer,
-    .song-card:hover .card-visualizer {
-      opacity: 1;
-    }
-    .bar {
-      width: 5px;
-      height: 14px;
-      background: var(--accent);
-      border-radius: 4px;
-      animation: bounceBar 0.8s infinite ease-in-out;
-      animation-play-state: paused;
-    }
-    .song-card.playing .bar {
-      animation-play-state: running;
-    }
-    .bar:nth-child(2) { animation-delay: 0.15s; }
-    .bar:nth-child(3) { animation-delay: 0.3s; }
-    .bar:nth-child(4) { animation-delay: 0.45s; }
-
-    @keyframes bounceBar {
-      0%, 100% { height: 10px; }
-      50% { height: 36px; background: var(--primary); }
-    }
-
-    .song-title {
-      font-weight: 700;
-      font-size: 1rem;
-      margin-bottom: 4px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .song-artist {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-    }
-
-    /* Duo & Trio Room Cards */
-    .sync-hub {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-    .room-box {
-      background: var(--card-glass);
-      border: 1px solid var(--border-glass);
-      border-radius: 20px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .avatar-row {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin: 8px 0;
-    }
-    .avatar-circle {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      border: 2px solid var(--primary);
-      padding: 3px;
-      position: relative;
-      box-shadow: var(--glow);
-    }
-    .avatar-circle img {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-    .avatar-circle span {
-      display: block;
-      text-align: center;
-      font-size: 0.78rem;
-      margin-top: 6px;
-      font-weight: 600;
-    }
-
-    .link-copy-bar {
-      display: flex;
-      gap: 8px;
-      background: rgba(0, 0, 0, 0.35);
-      padding: 8px;
-      border-radius: 12px;
-      border: 1px solid var(--border-glass);
-    }
-    .link-copy-bar input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      color: var(--accent);
-      font-size: 0.85rem;
-      outline: none;
-      padding: 0 8px;
-    }
-
-    /* Player Footer */
-    .player-bar {
-      grid-column: 1 / -1;
-      background: var(--bg-glass);
-      border: 1px solid var(--border-glass);
-      border-radius: 22px;
-      padding: 12px 24px;
-      display: grid;
-      grid-template-columns: 280px 1fr 300px;
-      align-items: center;
-      gap: 20px;
-      backdrop-filter: blur(22px);
-      box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.5);
-    }
-
-    .now-playing {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-    .now-playing img {
-      width: 62px;
-      height: 62px;
-      border-radius: 14px;
-      object-fit: cover;
-      border: 1px solid var(--border-glass);
-    }
-    .fav-heart {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 1.3rem;
-      cursor: pointer;
-      transition: 0.25s;
-    }
-    .fav-heart.active {
-      color: var(--primary);
-      transform: scale(1.25);
-      text-shadow: var(--glow);
-    }
-
-    .player-center {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .ctrl-btn {
-      background: var(--card-glass);
-      border: 1px solid var(--border-glass);
-      color: #fff;
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: grid;
-      place-items: center;
-      transition: 0.25s;
-    }
-    .ctrl-btn.active {
-      background: var(--primary);
-      border-color: var(--primary);
-      box-shadow: var(--glow);
-    }
-    .play-main {
-      width: 48px;
-      height: 48px;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      border: none;
-      box-shadow: var(--glow);
-      font-size: 1.1rem;
-    }
-
-    .seek-row {
-      width: 100%;
-      max-width: 520px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.78rem;
-      color: var(--text-muted);
-    }
-    .seek-slider {
-      flex: 1;
-      accent-color: var(--primary);
-      cursor: pointer;
-      height: 5px;
-    }
-
-    .player-right {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 14px;
-    }
-    #freqCanvas {
-      width: 130px;
-      height: 46px;
-      border-radius: 10px;
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid var(--border-glass);
-    }
-
-    /* Floating Small Toggle Windows */
-    .floating-window {
-      position: fixed;
-      top: 90px;
-      right: 34px;
-      width: 330px;
-      background: rgba(16, 10, 24, 0.88);
-      border: 1px solid var(--border-glass);
-      border-radius: 20px;
-      padding: 20px;
-      backdrop-filter: blur(24px);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
-      z-index: 100;
-      display: none;
-      animation: popWindow 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
-    }
-    .floating-window.open {
-      display: block;
-    }
-    @keyframes popWindow {
-      from { opacity: 0; transform: scale(0.85) translateY(-15px); }
-      to { opacity: 1; transform: scale(1) translateY(0); }
-    }
-    .win-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border-glass);
-    }
-    .close-win {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 1.1rem;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-bottom: 12px;
-    }
-    .form-group label {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-    .form-group input, .form-group select {
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid var(--border-glass);
-      background: rgba(255, 255, 255, 0.06);
-      color: #fff;
-      outline: none;
-    }
-
-    /* Heart Burst Container */
-    .heart-particle {
-      position: fixed;
-      pointer-events: none;
-      font-size: 1.4rem;
-      animation: floatUpHeart 1.2s ease-out forwards;
-      z-index: 999;
-    }
-    @keyframes floatUpHeart {
-      0% { opacity: 1; transform: translateY(0) scale(0.8); }
-      100% { opacity: 0; transform: translateY(-90px) scale(1.6) rotate(15deg); }
-    }
-
-    @media (max-width: 900px) {
-      .app-shell { grid-template-columns: 1fr; }
-      .sidebar { display: none; }
-      .sync-hub { grid-template-columns: 1fr; }
-      .player-bar { grid-template-columns: 1fr; height: auto; }
-    }
-  </style>
+  <title>VelvetSync — Real-Time Couple & Trio Music Sanctuary</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 </head>
 <body>
 
@@ -690,7 +12,7 @@
   <div id="bgLayer1" class="bg-layer active"></div>
   <div id="bgLayer2" class="bg-layer"></div>
 
-  <!-- Romantic Couple Video Background (Activates in Duo/Trio Sync Modes) -->
+  <!-- Romantic Couple Video Background (Auto-Activates in Duo/Trio Sync Modes) -->
   <video id="coupleVideoBg" loop muted playsinline>
     <source src="https://assets.mixkit.co/videos/preview/mixkit-silhouette-of-a-couple-at-sunset-4189-large.mp4" type="video/mp4" />
   </video>
@@ -720,13 +42,23 @@
           <button class="nav-btn" onclick="switchSection('couple', this)">
             <span>🌸</span> Couple Sakura Sanctuary
           </button>
+          <button class="nav-btn" onclick="switchSection('favorites', this)">
+            <span>💖</span> Liked Couple Songs
+          </button>
         </nav>
       </div>
 
+      <!-- Small Floating Toggle Windows Menu -->
       <div class="quick-toggles">
         <h4>Floating Studio Windows</h4>
         <button class="toggle-chip" onclick="toggleWindow('bgWin')">
-          <span>🖼️ Couple BG Wallpapers</span> <span>+</span>
+          <span>🖼️ Couple Wallpapers</span> <span>+</span>
+        </button>
+        <button class="toggle-chip" onclick="toggleWindow('fxWin')">
+          <span>🎧 Slowed+Reverb & FX</span> <span>+</span>
+        </button>
+        <button class="toggle-chip" onclick="toggleWindow('chatWin')">
+          <span>💬 Live Room Chat</span> <span>+</span>
         </button>
         <button class="toggle-chip" onclick="toggleWindow('addSongWin')">
           <span>🎵 Add / Upload Song</span> <span>+</span>
@@ -743,27 +75,54 @@
         <div class="search-box">
           <input type="text" id="searchInput" placeholder="Search romantic tracks, lo-fi beats, artists..." oninput="renderSongs()" />
         </div>
+
         <div class="status-pills">
           <div class="pill">
             <span class="dot-live"></span>
             <span id="syncStatusText">Solo Mode (Ready to Sync)</span>
           </div>
-          <div class="pill" onclick="toggleSakura()" style="cursor:pointer;">
-            🌸 <span id="sakuraStatus">Sakura: Auto</span>
+          <div class="pill" onclick="toggleSakura()" style="cursor:pointer;" title="Toggle Falling Sakura Petals">
+            🌸 <span id="sakuraStatus">Sakura: ON</span>
+          </div>
+          <div class="pill" onclick="toggleWindow('chatWin')" style="cursor:pointer;" title="Open Live Couple Chat">
+            💬 <span>Chat</span>
           </div>
         </div>
       </header>
+
+      <!-- Live Synchronized Lyric / Dedication Ribbon -->
+      <div class="lyric-ribbon">
+        <span class="lyric-badge">LIVE LYRICS & VIBE</span>
+        <marquee id="lyricTicker" behavior="scroll" direction="left" scrollamount="4">
+          ✨ Welcome to VelvetSync — Create a Duo or Trio link to stream music & couple video backdrops in real time! ✨
+        </marquee>
+        <div class="reaction-bar">
+          <button onclick="sendLiveReaction('💖')" title="Send Floating Heart">💖</button>
+          <button onclick="sendLiveReaction('🌸')" title="Send Sakura">🌸</button>
+          <button onclick="sendLiveReaction('🔥')" title="Send Fire">🔥</button>
+          <button onclick="sendLiveReaction('🥺')" title="Send Cute">🥺</button>
+          <button onclick="sendLiveReaction('🥂')" title="Send Cheers">🥂</button>
+        </div>
+      </div>
 
       <!-- SECTION 1: DISCOVER -->
       <section id="sec-discover" class="view-section active">
         <div class="hero-banner">
           <div class="hero-info">
             <h1>Real-Time Heartbeat Streaming</h1>
-            <p>Stream free synthesized & custom tracks with automatic Pinterest-style couple wallpaper cross-fades, live frequency visualizers, and one-click WAV audio downloads.</p>
-            <button class="btn-primary" onclick="playSong(0)">▶ Play Featured Couple Mix</button>
+            <p>Stream free romantic tracks with automatic Pinterest couple wallpaper cross-fades, Slowed + Reverb audio FX, 8D surround sound, and instant WAV downloads.</p>
+            <div class="hero-actions">
+              <button class="btn-primary" onclick="playSong(0)">▶ Play Featured Couple Mix</button>
+              <button class="toggle-chip" onclick="toggleWindow('fxWin')">🎧 Open Slowed + Reverb Studio</button>
+            </div>
+          </div>
+          <div class="vinyl-showcase" id="vinylDisc">
+            <img id="vinylArt" src="https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=300&auto=format&fit=crop&q=80" alt="Vinyl" />
+            <div class="vinyl-hole"></div>
           </div>
         </div>
-        <h3 style="margin-bottom: 14px;">All Available Free Tracks</h3>
+
+        <h3 class="section-heading">All Available Free Tracks</h3>
         <div id="discoverGrid" class="song-grid"></div>
       </section>
 
@@ -772,41 +131,49 @@
         <div class="hero-banner">
           <div class="hero-info">
             <h1>👩‍❤️‍👨 Duo Real-Time Sync Room</h1>
-            <p>Generate a private Duo link and send it to your partner. The moment they join, your couple background video starts playing and songs stay locked in real-time sync across both devices.</p>
-            <button class="btn-primary" onclick="createSyncRoom('duo')">🔗 Generate Duo Invite Link</button>
+            <p>Generate a private Duo link and send it to your partner. The moment they open the link, the romantic couple background video starts and songs play simultaneously on both devices.</p>
+            <div class="hero-actions">
+              <button class="btn-primary" onclick="createSyncRoom('duo')">🔗 Generate Duo Invite Link</button>
+              <button class="toggle-chip" onclick="toggleWindow('chatWin')">💬 Open Couple Chat</button>
+            </div>
           </div>
         </div>
 
         <div class="sync-hub">
           <div class="room-box">
             <h3>Active Duo Session</h3>
+            <div class="name-edit-row">
+              <input type="text" id="myNickname" value="Toxic" placeholder="Your Name" />
+              <span style="color:var(--text-muted); font-size:0.82rem;">(Your Display Name)</span>
+            </div>
+
             <div class="avatar-row">
               <div class="avatar-circle">
                 <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80" alt="Host" />
-                <span>Toxic (Host)</span>
+                <span id="hostNameLabel">Toxic (Host)</span>
               </div>
-              <div style="font-size: 1.6rem; color: var(--primary);">💞</div>
+              <div class="sync-pulse-icon">💞</div>
               <div class="avatar-circle">
                 <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80" alt="Partner" />
-                <span id="duoPartnerName">Akshu (Synced)</span>
+                <span id="duoPartnerName">Akshu (Partner)</span>
               </div>
             </div>
 
             <div class="link-copy-bar">
               <input type="text" id="duoLinkInput" readonly placeholder="Click 'Generate Duo Invite Link' above..." />
-              <button class="btn-primary" style="padding: 8px 14px;" onclick="copyRoomLink('duoLinkInput')">Copy</button>
+              <button class="btn-primary" style="padding: 8px 16px;" onclick="copyRoomLink('duoLinkInput')">Copy Link</button>
             </div>
           </div>
 
           <div class="room-box">
             <h3>Couple Video Backdrop Controls</h3>
-            <p style="font-size: 0.88rem; color: var(--text-muted);">Duo mode automatically enables the smooth romantic couple silhouette video in the background.</p>
+            <p style="font-size: 0.88rem; color: var(--text-muted);">Duo mode automatically plays a smooth romantic couple silhouette video in the background.</p>
             <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
               <button class="btn-primary" onclick="toggleVideoBackground(true)">🎬 Enable Couple Video</button>
               <button class="toggle-chip" onclick="toggleVideoBackground(false)">🖼️ Use Photo Slideshow</button>
             </div>
             <div class="form-group" style="margin-top: 10px;">
-              <label>Paste Custom Couple MP4 Video URL:</label>
+              <label>Paste Custom Couple MP4 Video URL (Syncs with Partner):</label>
               <input type="text" id="customVideoUrl" placeholder="https://example.com/couple-video.mp4" onchange="changeCoupleVideo(this.value)" />
             </div>
           </div>
@@ -818,7 +185,7 @@
         <div class="hero-banner">
           <div class="hero-info">
             <h1>🥂 Trio Sync Lounge (3-Way Live Play)</h1>
-            <p>Create a 3-person room link. Whenever anyone plays, pauses, or switches tracks, all three connected devices transition simultaneously with smooth background animations.</p>
+            <p>Create a 3-person room link. Whenever anyone plays, pauses, seeks, or switches tracks, all three connected devices transition simultaneously with smooth animations.</p>
             <button class="btn-primary" onclick="createSyncRoom('trio')">🔗 Create Trio Room Link</button>
           </div>
         </div>
@@ -836,33 +203,45 @@
             </div>
             <div class="avatar-circle">
               <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80" alt="User 3" />
-              <span>Guest #3</span>
+              <span>Friend #3</span>
             </div>
           </div>
           <div class="link-copy-bar">
             <input type="text" id="trioLinkInput" readonly placeholder="Click 'Create Trio Room Link' above..." />
-            <button class="btn-primary" style="padding: 8px 14px;" onclick="copyRoomLink('trioLinkInput')">Copy</button>
+            <button class="btn-primary" style="padding: 8px 16px;" onclick="copyRoomLink('trioLinkInput')">Copy Link</button>
           </div>
         </div>
       </section>
 
       <!-- SECTION 4: COUPLE SAKURA SANCTUARY -->
       <section id="sec-couple" class="view-section">
-        <div class="hero-banner" style="background: linear-gradient(125deg, rgba(255, 133, 179, 0.35), rgba(35, 12, 28, 0.78));">
+        <div class="hero-banner sakura-banner">
           <div class="hero-info">
             <h1>🌸 Sakura Couple Sanctuary</h1>
-            <p>Drifting cherry blossom petals, synchronized romantic playlists, and intimate couple themes designed for two.</p>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <p>Drifting cherry blossom petals, synchronized romantic playlists, and intimate couple themes that sync across both devices.</p>
+            <div class="hero-actions">
               <button class="btn-primary" onclick="playCouplePlaylist()">💖 Play Shared Couple Playlist</button>
-              <button class="toggle-chip" onclick="setTheme('default')">🌸 Sakura Blossom</button>
-              <button class="toggle-chip" onclick="setTheme('midnight')">🌙 Midnight Velvet</button>
-              <button class="toggle-chip" onclick="setTheme('golden')">✨ Golden Hour</button>
-              <button class="toggle-chip" onclick="setTheme('crimson')">🌹 Crimson Rose</button>
+              <button class="toggle-chip" onclick="setTheme('default', true)">🌸 Sakura Blossom</button>
+              <button class="toggle-chip" onclick="setTheme('midnight', true)">🌙 Midnight Velvet</button>
+              <button class="toggle-chip" onclick="setTheme('golden', true)">✨ Golden Hour</button>
+              <button class="toggle-chip" onclick="setTheme('crimson', true)">🌹 Crimson Rose</button>
+              <button class="toggle-chip" onclick="setTheme('cyber', true)">🔮 Cyber Heart</button>
             </div>
           </div>
         </div>
-        <h3 style="margin-bottom: 14px;">Curated Romantic Couple Playlist</h3>
+        <h3 class="section-heading">Curated Romantic Couple Playlist</h3>
         <div id="coupleGrid" class="song-grid"></div>
+      </section>
+
+      <!-- SECTION 5: LIKED FAVORITES -->
+      <section id="sec-favorites" class="view-section">
+        <div class="hero-banner">
+          <div class="hero-info">
+            <h1>💖 Your Favorited Couple Tracks</h1>
+            <p>Click the heart icon on any song or player bar to save your favorite romantic tracks here with custom heart burst animations.</p>
+          </div>
+        </div>
+        <div id="favGrid" class="song-grid"></div>
       </section>
     </main>
 
@@ -899,24 +278,70 @@
     </footer>
   </div>
 
-  <!-- FLOATING SMALL TOGGLE WINDOW 1: COUPLE WALLPAPER MANAGER -->
+  <!-- FLOATING WINDOW 1: COUPLE WALLPAPER MANAGER -->
   <div id="bgWin" class="floating-window">
     <div class="win-header">
       <h4>🖼️ Couple Wallpaper Slideshow</h4>
       <button class="close-win" onclick="toggleWindow('bgWin')">✕</button>
     </div>
     <div class="form-group">
-      <label>Add Pinterest / Direct Image URL:</label>
-      <input type="url" id="newBgInput" placeholder="https://i.pinimg.com/..." />
+      <label>Paste Pinterest / Direct Image URL:</label>
+      <input type="url" id="newBgInput" placeholder="https://i.pinimg.com/originals/..." />
     </div>
-    <button class="btn-primary" style="width:100%; margin-bottom:12px;" onclick="addCustomBackground()">+ Add & Cross-Fade Now</button>
+    <button class="btn-primary" style="width:100%; margin-bottom:12px;" onclick="addCustomBackground()">+ Add & Sync Wallpaper</button>
     <div class="form-group">
       <label>Auto-Transition Speed (Seconds):</label>
       <input type="number" id="bgIntervalInput" value="8" min="4" max="60" onchange="updateBgSpeed(this.value)" />
     </div>
   </div>
 
-  <!-- FLOATING SMALL TOGGLE WINDOW 2: ADD CUSTOM SONG FORM -->
+  <!-- FLOATING WINDOW 2: SLOWED + REVERB & AUDIO FX STUDIO -->
+  <div id="fxWin" class="floating-window">
+    <div class="win-header">
+      <h4>🎧 Couple Audio FX Studio</h4>
+      <button class="close-win" onclick="toggleWindow('fxWin')">✕</button>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button id="slowedBtn" class="toggle-chip" onclick="setAudioVibe('slowed')">
+        <span>🌙 Slowed + Dreamy Filter</span> <span>Off</span>
+      </button>
+      <button id="nightcoreBtn" class="toggle-chip" onclick="setAudioVibe('nightcore')">
+        <span>⚡ Nightcore (Speed + Pitch)</span> <span>Off</span>
+      </button>
+      <button id="surroundBtn" class="toggle-chip" onclick="toggle8DAudio()">
+        <span>🌀 8D Surround Panning</span> <span id="status8D">Off</span>
+      </button>
+      <button id="rainBtn" class="toggle-chip" onclick="toggleRainAmbience()">
+        <span>🌧️ Cozy Midnight Rain Layer</span> <span id="statusRain">Off</span>
+      </button>
+      <div class="form-group" style="margin-top:6px;">
+        <label>⏲️ Couple Sleep Timer (Minutes):</label>
+        <select onchange="setSleepTimer(this.value)">
+          <option value="0">Off</option>
+          <option value="15">15 Minutes</option>
+          <option value="30">30 Minutes</option>
+          <option value="60">60 Minutes</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING WINDOW 3: LIVE DUO / TRIO CHAT -->
+  <div id="chatWin" class="floating-window">
+    <div class="win-header">
+      <h4>💬 Live Sync Room Chat</h4>
+      <button class="close-win" onclick="toggleWindow('chatWin')">✕</button>
+    </div>
+    <div id="chatMessages" class="chat-box">
+      <div class="chat-msg"><strong>System:</strong> Create or join a Duo/Trio room to chat live while listening! 💖</div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="Write a sweet note..." onkeydown="if(event.key==='Enter') sendChatMessage()" />
+      <button class="btn-primary" style="padding:8px 14px;" onclick="sendChatMessage()">Send</button>
+    </div>
+  </div>
+
+  <!-- FLOATING WINDOW 4: ADD CUSTOM SONG FORM -->
   <div id="addSongWin" class="floating-window">
     <div class="win-header">
       <h4>🎵 Add Song to Library</h4>
@@ -931,658 +356,33 @@
       <input type="text" id="customArtist" placeholder="e.g., Toxic & Akshu" />
     </div>
     <div class="form-group">
-      <label>Upload Local MP3/Audio File (or leave blank for Synth)</label>
+      <label>Direct MP3 URL (or Upload File Below)</label>
+      <input type="url" id="customAudioUrl" placeholder="https://example.com/song.mp3" />
+    </div>
+    <div class="form-group">
+      <label>Upload Local MP3/Audio File</label>
       <input type="file" id="customAudioFile" accept="audio/*" />
     </div>
     <button class="btn-primary" style="width:100%;" onclick="addNewSong()">✨ Add Track to Player</button>
   </div>
 
-  <!-- FLOATING SMALL TOGGLE WINDOW 3: DYNAMIC THEME STUDIO -->
+  <!-- FLOATING WINDOW 5: DYNAMIC THEME STUDIO -->
   <div id="themeWin" class="floating-window">
     <div class="win-header">
       <h4>🎨 Romantic Theme Studio</h4>
       <button class="close-win" onclick="toggleWindow('themeWin')">✕</button>
     </div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-      <button class="toggle-chip" onclick="setTheme('default')">🌸 Sakura Pink</button>
-      <button class="toggle-chip" onclick="setTheme('midnight')">💜 Midnight</button>
-      <button class="toggle-chip" onclick="setTheme('golden')">✨ Golden Hour</button>
-      <button class="toggle-chip" onclick="setTheme('crimson')">🌹 Velvet Rose</button>
+      <button class="toggle-chip" onclick="setTheme('default', true)">🌸 Sakura Pink</button>
+      <button class="toggle-chip" onclick="setTheme('midnight', true)">💜 Midnight</button>
+      <button class="toggle-chip" onclick="setTheme('golden', true)">✨ Golden Hour</button>
+      <button class="toggle-chip" onclick="setTheme('crimson', true)">🌹 Velvet Rose</button>
+      <button class="toggle-chip" onclick="setTheme('cyber', true)">🔮 Cyber Heart</button>
     </div>
   </div>
 
-  <script>
-    /* =========================================================================
-       1. AUTOMATIC COUPLE BACKGROUND SLIDESHOW (PINTEREST / ROMANTIC AESTHETIC)
-       ========================================================================= */
-    const coupleWallpapers = [
-      "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=1600&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=1600&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=1600&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1494774157365-9e04c6720e47?w=1600&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1600&auto=format&fit=crop&q=80"
-    ];
-    let bgIndex = 0;
-    let activeLayer = 1;
-    let bgTimer = null;
-
-    function applyBackground(url) {
-      const layer1 = document.getElementById("bgLayer1");
-      const layer2 = document.getElementById("bgLayer2");
-      if (activeLayer === 1) {
-        layer2.style.backgroundImage = `url('${url}')`;
-        layer2.classList.add("active");
-        layer1.classList.remove("active");
-        activeLayer = 2;
-      } else {
-        layer1.style.backgroundImage = `url('${url}')`;
-        layer1.classList.add("active");
-        layer2.classList.remove("active");
-        activeLayer = 1;
-      }
-    }
-
-    function startBgSlideshow(intervalSec = 8) {
-      if (bgTimer) clearInterval(bgTimer);
-      document.getElementById("bgLayer1").style.backgroundImage = `url('${coupleWallpapers[0]}')`;
-      bgTimer = setInterval(() => {
-        bgIndex = (bgIndex + 1) % coupleWallpapers.length;
-        applyBackground(coupleWallpapers[bgIndex]);
-      }, intervalSec * 1000);
-    }
-
-    function addCustomBackground() {
-      const url = document.getElementById("newBgInput").value.trim();
-      if (!url) return;
-      coupleWallpapers.unshift(url);
-      bgIndex = 0;
-      applyBackground(url);
-      document.getElementById("newBgInput").value = "";
-    }
-
-    function updateBgSpeed(sec) {
-      startBgSlideshow(Math.max(4, Number(sec) || 8));
-    }
-
-    /* =========================================================================
-       2. BUILT-IN FREE SONGS + REAL-TIME POLYPHONIC AUDIO & MP3 ENGINE
-       ========================================================================= */
-    const songs = [
-      {
-        id: 1,
-        title: "Sakura Midnight Promise",
-        artist: "VelvetSync Originals",
-        cover: "https://images.unsplash.com/photo-1522383225653-ed111181a951?w=600&auto=format&fit=crop&q=80",
-        couple: true,
-        tempo: 88,
-        notes: [261.63, 329.63, 392.00, 523.25, 392.00, 329.63],
-        audioUrl: null
-      },
-      {
-        id: 2,
-        title: "Two Hearts Under Neon",
-        artist: "Toxic x Akshu Sessions",
-        cover: "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=600&auto=format&fit=crop&q=80",
-        couple: true,
-        tempo: 96,
-        notes: [293.66, 369.99, 440.00, 587.33, 440.00, 369.99],
-        audioUrl: null
-      },
-      {
-        id: 3,
-        title: "Velvet Rain & Coffee",
-        artist: "Lo-Fi Couple Collective",
-        cover: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=600&auto=format&fit=crop&q=80",
-        couple: true,
-        tempo: 78,
-        notes: [220.00, 261.63, 329.63, 440.00, 329.63, 261.63],
-        audioUrl: null
-      },
-      {
-        id: 4,
-        title: "Golden Hour Silhouette",
-        artist: "Sunset Dreamers",
-        cover: "https://images.unsplash.com/photo-1494774157365-9e04c6720e47?w=600&auto=format&fit=crop&q=80",
-        couple: true,
-        tempo: 92,
-        notes: [349.23, 440.00, 523.25, 698.46, 523.25, 440.00],
-        audioUrl: null
-      },
-      {
-        id: 5,
-        title: "Starlight Highway (Trio Mix)",
-        artist: "Night Drive Crew",
-        cover: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80",
-        couple: false,
-        tempo: 112,
-        notes: [329.63, 392.00, 493.88, 659.25, 493.88, 392.00],
-        audioUrl: null
-      },
-      {
-        id: 6,
-        title: "Cherry Blossom Breeze",
-        artist: "Kyoto Acoustic Duo",
-        cover: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&auto=format&fit=crop&q=80",
-        couple: true,
-        tempo: 84,
-        notes: [246.94, 311.13, 369.99, 493.88, 369.99, 311.13],
-        audioUrl: null
-      }
-    ];
-
-    let currentIndex = 0;
-    let isPlaying = false;
-    let isLooping = false;
-    let currentProgress = 0;
-    let progressInterval = null;
-    let masterVolume = 0.8;
-
-    // Web Audio API Context for Real-Time Synth + Visualizer
-    let audioCtx = null;
-    let analyser = null;
-    let gainNode = null;
-    let synthInterval = null;
-    let htmlAudio = new Audio();
-    htmlAudio.crossOrigin = "anonymous";
-
-    function initAudioEngine() {
-      if (audioCtx) return;
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AudioContext();
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 128;
-      gainNode = audioCtx.createGain();
-      gainNode.gain.value = masterVolume;
-      gainNode.connect(analyser);
-      analyser.connect(audioCtx.destination);
-      drawFrequencyVisualizer();
-    }
-
-    function playSong(index, broadcast = true) {
-      initAudioEngine();
-      if (audioCtx.state === "suspended") audioCtx.resume();
-
-      currentIndex = index;
-      const track = songs[currentIndex];
-      isPlaying = true;
-      currentProgress = 0;
-
-      // Update Player UI
-      document.getElementById("playerArt").src = track.cover;
-      document.getElementById("playerTitle").textContent = track.title;
-      document.getElementById("playerArtist").textContent = track.artist;
-      document.getElementById("playPauseBtn").textContent = "⏸";
-
-      stopAudioPlayback();
-
-      if (track.audioUrl) {
-        htmlAudio.src = track.audioUrl;
-        htmlAudio.loop = isLooping;
-        htmlAudio.volume = masterVolume;
-        htmlAudio.play();
-      } else {
-        startPolyphonicTrack(track);
-      }
-
-      startProgressCounter();
-      renderSongs();
-
-      if (broadcast) broadcastSyncState("PLAY", { index: currentIndex, progress: 0 });
-    }
-
-    function startPolyphonicTrack(track) {
-      let step = 0;
-      const beatMs = (60 / track.tempo) * 500;
-      synthInterval = setInterval(() => {
-        if (!isPlaying) return;
-        const freq = track.notes[step % track.notes.length];
-
-        // Main Romantic Pad / Piano Tone
-        const osc = audioCtx.createOscillator();
-        const noteGain = audioCtx.createGain();
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
-        // Warm Sub-Bass Harmony on Downbeats
-        if (step % 2 === 0) {
-          const subOsc = audioCtx.createOscillator();
-          const subGain = audioCtx.createGain();
-          subOsc.type = "sine";
-          subOsc.frequency.setValueAtTime(freq / 2, audioCtx.currentTime);
-          subGain.gain.setValueAtTime(0.18, audioCtx.currentTime);
-          subGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
-          subOsc.connect(subGain);
-          subGain.connect(gainNode);
-          subOsc.start();
-          subOsc.stop(audioCtx.currentTime + 0.8);
-        }
-
-        noteGain.gain.setValueAtTime(0.24, audioCtx.currentTime);
-        noteGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.65);
-
-        osc.connect(noteGain);
-        noteGain.connect(gainNode);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.65);
-
-        step++;
-      }, beatMs);
-    }
-
-    function stopAudioPlayback() {
-      if (synthInterval) clearInterval(synthInterval);
-      htmlAudio.pause();
-    }
-
-    function togglePlay(broadcast = true) {
-      initAudioEngine();
-      if (!isPlaying) {
-        playSong(currentIndex, false);
-      } else {
-        isPlaying = false;
-        stopAudioPlayback();
-        if (progressInterval) clearInterval(progressInterval);
-        document.getElementById("playPauseBtn").textContent = "▶";
-        renderSongs();
-      }
-      if (broadcast) broadcastSyncState(isPlaying ? "PLAY" : "PAUSE", { index: currentIndex, progress: currentProgress });
-    }
-
-    function prevSong() {
-      const nextIdx = (currentIndex - 1 + songs.length) % songs.length;
-      playSong(nextIdx);
-    }
-
-    function nextSong() {
-      const nextIdx = (currentIndex + 1) % songs.length;
-      playSong(nextIdx);
-    }
-
-    function toggleLoop() {
-      isLooping = !isLooping;
-      htmlAudio.loop = isLooping;
-      document.getElementById("loopBtn").classList.toggle("active", isLooping);
-    }
-
-    function setVolume(val) {
-      masterVolume = parseFloat(val);
-      if (gainNode) gainNode.gain.value = masterVolume;
-      htmlAudio.volume = masterVolume;
-    }
-
-    function startProgressCounter() {
-      if (progressInterval) clearInterval(progressInterval);
-      progressInterval = setInterval(() => {
-        if (!isPlaying) return;
-        currentProgress += 1;
-        if (currentProgress >= 100) {
-          if (isLooping) {
-            currentProgress = 0;
-          } else {
-            nextSong();
-            return;
-          }
-        }
-        document.getElementById("seekBar").value = currentProgress;
-        const totalSec = Math.floor((currentProgress / 100) * 150);
-        const mins = Math.floor(totalSec / 60);
-        const secs = String(totalSec % 60).padStart(2, "0");
-        document.getElementById("curTime").textContent = `${mins}:${secs}`;
-      }, 1500);
-    }
-
-    function seekSong(val) {
-      currentProgress = Number(val);
-      broadcastSyncState("SEEK", { index: currentIndex, progress: currentProgress });
-    }
-
-    /* =========================================================================
-       3. DOWNLOAD SONG GENERATOR (REAL WAV AUDIO EXPORT)
-       ========================================================================= */
-    function downloadCurrentSong() {
-      const track = songs[currentIndex];
-      if (track.audioUrl) {
-        const a = document.createElement("a");
-        a.href = track.audioUrl;
-        a.download = `${track.title}.mp3`;
-        a.click();
-        return;
-      }
-
-      // Synthesize a clean downloadable WAV file of the current track's melody
-      const sampleRate = 44100;
-      const durationSeconds = 8;
-      const numSamples = sampleRate * durationSeconds;
-      const buffer = new ArrayBuffer(44 + numSamples * 2);
-      const view = new DataView(buffer);
-
-      const writeStr = (offset, str) => {
-        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-      };
-
-      writeStr(0, "RIFF");
-      view.setUint32(4, 36 + numSamples * 2, true);
-      writeStr(8, "WAVE");
-      writeStr(12, "fmt ");
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true);
-      view.setUint16(22, 1, true);
-      view.setUint32(24, sampleRate, true);
-      view.setUint32(28, sampleRate * 2, true);
-      view.setUint16(32, 2, true);
-      view.setUint16(34, 16, true);
-      writeStr(36, "data");
-      view.setUint32(40, numSamples * 2, true);
-
-      for (let i = 0; i < numSamples; i++) {
-        const t = i / sampleRate;
-        const noteIdx = Math.floor(t * 2) % track.notes.length;
-        const freq = track.notes[noteIdx];
-        const env = Math.exp(-3 * ((t * 2) % 1));
-        const sample = Math.sin(2 * Math.PI * freq * t) * env * 0.4;
-        view.setInt16(44 + i * 2, sample * 32767, true);
-      }
-
-      const blob = new Blob([buffer], { type: "audio/wav" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${track.title.replace(/\s+/g, "_")}_VelvetSync.wav`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    /* =========================================================================
-       4. REAL-TIME DUO & TRIO LINK SYNCHRONIZATION ENGINE
-       ========================================================================= */
-    const syncChannel = new BroadcastChannel("velvetsync_realtime_room");
-    let activeRoomId = null;
-
-    function createSyncRoom(mode) {
-      const code = `${mode.toUpperCase()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-      activeRoomId = code;
-      const shareUrl = `${window.location.origin}${window.location.pathname}?room=${code}&mode=${mode}`;
-
-      if (mode === "duo") {
-        document.getElementById("duoLinkInput").value = shareUrl;
-      } else {
-        document.getElementById("trioLinkInput").value = shareUrl;
-      }
-
-      activateRoomExperience(code, mode);
-    }
-
-    function activateRoomExperience(roomCode, mode) {
-      activeRoomId = roomCode;
-      document.getElementById("syncStatusText").textContent = `${mode.toUpperCase()} Live Room: ${roomCode}`;
-      toggleVideoBackground(true);
-      playSong(currentIndex, true);
-    }
-
-    function copyRoomLink(inputId) {
-      const input = document.getElementById(inputId);
-      if (!input.value) return;
-      input.select();
-      navigator.clipboard.writeText(input.value);
-      alert("Invite Link Copied! Open it in another tab or send it to your partner to start synchronized playback.");
-    }
-
-    function broadcastSyncState(action, payload) {
-      if (!activeRoomId) return;
-      syncChannel.postMessage({ room: activeRoomId, action, payload });
-    }
-
-    syncChannel.onmessage = (event) => {
-      const { room, action, payload } = event.data;
-      if (room !== activeRoomId) return;
-
-      if (action === "PLAY") {
-        playSong(payload.index, false);
-      } else if (action === "PAUSE") {
-        if (isPlaying) togglePlay(false);
-      } else if (action === "SEEK") {
-        currentProgress = payload.progress;
-        document.getElementById("seekBar").value = currentProgress;
-      }
-    };
-
-    function toggleVideoBackground(enable) {
-      const vid = document.getElementById("coupleVideoBg");
-      if (enable) {
-        vid.classList.add("active");
-        vid.play().catch(() => {});
-      } else {
-        vid.classList.remove("active");
-        vid.pause();
-      }
-    }
-
-    function changeCoupleVideo(url) {
-      if (!url) return;
-      const vid = document.getElementById("coupleVideoBg");
-      vid.src = url;
-      toggleVideoBackground(true);
-    }
-
-    /* =========================================================================
-       5. FALLING SAKURA CHERRY BLOSSOM PETALS CANVAS
-       ========================================================================= */
-    const sakuraCanvas = document.getElementById("sakuraCanvas");
-    const sCtx = sakuraCanvas.getContext("2d");
-    let sakuraActive = true;
-    let petals = [];
-
-    function resizeSakura() {
-      sakuraCanvas.width = window.innerWidth;
-      sakuraCanvas.height = window.innerHeight;
-    }
-    window.addEventListener("resize", resizeSakura);
-    resizeSakura();
-
-    for (let i = 0; i < 48; i++) {
-      petals.push({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        r: 5 + Math.random() * 7,
-        speedY: 0.7 + Math.random() * 1.4,
-        speedX: -0.5 + Math.random() * 1.5,
-        angle: Math.random() * Math.PI * 2,
-        spin: (Math.random() - 0.5) * 0.03
-      });
-    }
-
-    function animateSakura() {
-      sCtx.clearRect(0, 0, sakuraCanvas.width, sakuraCanvas.height);
-      if (sakuraActive) {
-        petals.forEach((p) => {
-          p.y += p.speedY;
-          p.x += p.speedX + Math.sin(p.angle) * 0.4;
-          p.angle += p.spin;
-
-          if (p.y > sakuraCanvas.height) {
-            p.y = -15;
-            p.x = Math.random() * sakuraCanvas.width;
-          }
-
-          sCtx.save();
-          sCtx.translate(p.x, p.y);
-          sCtx.rotate(p.angle);
-          sCtx.beginPath();
-          sCtx.moveTo(0, 0);
-          sCtx.bezierCurveTo(-p.r, -p.r, -p.r * 1.4, p.r / 2, 0, p.r);
-          sCtx.bezierCurveTo(p.r * 1.4, p.r / 2, p.r, -p.r, 0, 0);
-          sCtx.fillStyle = "rgba(255, 183, 213, 0.78)";
-          sCtx.fill();
-          sCtx.restore();
-        });
-      }
-      requestAnimationFrame(animateSakura);
-    }
-
-    function toggleSakura() {
-      sakuraActive = !sakuraActive;
-      sakuraCanvas.classList.toggle("active", sakuraActive);
-      document.getElementById("sakuraStatus").textContent = sakuraActive ? "Sakura: ON" : "Sakura: OFF";
-    }
-
-    /* =========================================================================
-       6. REAL-TIME FREQUENCY VISUALIZER & UI RENDERING
-       ========================================================================= */
-    function drawFrequencyVisualizer() {
-      const canvas = document.getElementById("freqCanvas");
-      const ctx = canvas.getContext("2d");
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      function renderFrame() {
-        requestAnimationFrame(renderFrame);
-        analyser.getByteFrequencyData(dataArray);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const barWidth = (canvas.width / 24) - 2;
-        let x = 2;
-        for (let i = 0; i < 24; i++) {
-          const barHeight = Math.max(4, (dataArray[i] / 255) * canvas.height);
-          ctx.fillStyle = "#ff4d8d";
-          ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-          x += barWidth + 2;
-        }
-      }
-      renderFrame();
-    }
-
-    function renderSongs() {
-      const query = document.getElementById("searchInput").value.toLowerCase();
-      const discoverGrid = document.getElementById("discoverGrid");
-      const coupleGrid = document.getElementById("coupleGrid");
-
-      const createCardHTML = (song, idx) => {
-        const activeClass = idx === currentIndex && isPlaying ? "playing" : "";
-        return `
-          <div class="song-card ${activeClass}" onclick="playSong(${idx})">
-            <div class="art-wrapper">
-              <img src="${song.cover}" alt="${song.title}" />
-              <div class="card-visualizer">
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-              </div>
-            </div>
-            <div class="song-title">
-              <span>${song.title}</span>
-              <span style="color:var(--primary);">♥</span>
-            </div>
-            <div class="song-artist">${song.artist}</div>
-          </div>
-        `;
-      };
-
-      discoverGrid.innerHTML = songs
-        .map((s, idx) => ({ s, idx }))
-        .filter(({ s }) => s.title.toLowerCase().includes(query) || s.artist.toLowerCase().includes(query))
-        .map(({ s, idx }) => createCardHTML(s, idx))
-        .join("");
-
-      coupleGrid.innerHTML = songs
-        .map((s, idx) => ({ s, idx }))
-        .filter(({ s }) => s.couple)
-        .map(({ s, idx }) => createCardHTML(s, idx))
-        .join("");
-    }
-
-    function addNewSong() {
-      const title = document.getElementById("customTitle").value.trim() || "Untitled Romantic Track";
-      const artist = document.getElementById("customArtist").value.trim() || "Custom Artist";
-      const fileInput = document.getElementById("customAudioFile");
-      let audioUrl = null;
-      if (fileInput.files && fileInput.files[0]) {
-        audioUrl = URL.createObjectURL(fileInput.files[0]);
-      }
-
-      songs.unshift({
-        id: Date.now(),
-        title,
-        artist,
-        cover: coupleWallpapers[bgIndex % coupleWallpapers.length],
-        couple: true,
-        tempo: 90,
-        notes: [261.63, 329.63, 392.00, 523.25],
-        audioUrl
-      });
-
-      renderSongs();
-      toggleWindow("addSongWin");
-      playSong(0);
-    }
-
-    function switchSection(sectionId, btn) {
-      document.querySelectorAll(".view-section").forEach((s) => s.classList.remove("active"));
-      document.getElementById(`sec-${sectionId}`).classList.add("active");
-      document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
-      if (btn) btn.classList.add("active");
-
-      // Automatically activate Sakura petals in Couple Sanctuary
-      if (sectionId === "couple") {
-        sakuraActive = true;
-        sakuraCanvas.classList.add("active");
-      }
-      // Automatically activate Couple Video in Duo/Trio sections
-      if (sectionId === "duo" || sectionId === "trio") {
-        toggleVideoBackground(true);
-      } else {
-        toggleVideoBackground(false);
-      }
-    }
-
-    function playCouplePlaylist() {
-      const firstCoupleIndex = songs.findIndex((s) => s.couple);
-      if (firstCoupleIndex !== -1) playSong(firstCoupleIndex);
-    }
-
-    function toggleWindow(winId) {
-      const win = document.getElementById(winId);
-      win.classList.toggle("open");
-    }
-
-    function setTheme(themeName) {
-      if (themeName === "default") {
-        document.documentElement.removeAttribute("data-theme");
-      } else {
-        document.documentElement.setAttribute("data-theme", themeName);
-      }
-    }
-
-    function triggerFavHeart(e) {
-      const btn = document.getElementById("favBtn");
-      btn.classList.toggle("active");
-      for (let i = 0; i < 6; i++) {
-        const heart = document.createElement("div");
-        heart.className = "heart-particle";
-        heart.textContent = ["💖", "🌸", "💞", "✨"][i % 4];
-        heart.style.left = `${e.clientX + (Math.random() * 40 - 20)}px`;
-        heart.style.top = `${e.clientY - 10}px`;
-        document.body.appendChild(heart);
-        setTimeout(() => heart.remove(), 1200);
-      }
-    }
-
-    // Initialize App on Load
-    window.addEventListener("DOMContentLoaded", () => {
-      startBgSlideshow(8);
-      renderSongs();
-      sakuraCanvas.classList.add("active");
-      animateSakura();
-
-      // Check URL Parameters if joining a Duo or Trio Link
-      const params = new URLSearchParams(window.location.search);
-      const room = params.get("room");
-      const mode = params.get("mode") || "duo";
-      if (room) {
-        switchSection(mode, document.querySelectorAll(".nav-btn")[mode === "duo" ? 1 : 2]);
-        activateRoomExperience(room, mode);
-      }
-    });
-  </script>
+  <!-- Socket.IO Client Library & Main App Script -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
