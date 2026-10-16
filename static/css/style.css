@@ -314,7 +314,7 @@ body {
 
 .search-box {
   flex: 1;
-  max-width: 440px;
+  max-width: 560px;
   display: flex;
   gap: 8px;
 }
@@ -340,6 +340,21 @@ body {
   color: #fff;
   font-weight: 600;
   cursor: pointer;
+}
+.yt-search-btn {
+  padding: 0 14px;
+  border-radius: 99px;
+  border: 1px solid var(--border-glass);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.25s;
+}
+.yt-search-btn:hover {
+  background: var(--secondary);
 }
 
 .status-pills {
@@ -447,18 +462,18 @@ body {
   background: linear-gradient(125deg, rgba(255, 133, 179, 0.35), rgba(35, 12, 28, 0.78));
 }
 .hero-info h1 {
-  font-size: 1.75rem;
+  font-size: 1.7rem;
   margin-bottom: 8px;
 }
 .hero-info p {
   color: var(--text-muted);
-  font-size: 0.92rem;
-  max-width: 560px;
+  font-size: 0.9rem;
+  max-width: 620px;
   margin-bottom: 16px;
 }
 .hero-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -524,7 +539,7 @@ body {
 /* Song Cards Grid */
 .song-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));
   gap: 16px;
 }
 .song-card {
@@ -568,13 +583,25 @@ body {
   position: absolute;
   top: 8px;
   left: 8px;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.72);
   color: #fff;
   padding: 3px 8px;
   border-radius: 6px;
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.dur-tag {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #00f5d4;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .card-visualizer {
