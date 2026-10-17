@@ -69,8 +69,8 @@
   <div id="bgLayer1" class="bg-layer active"></div>
   <div id="bgLayer2" class="bg-layer"></div>
 
-  <!-- Romantic Couple Video Background (Auto-Activates in Duo/Trio Sync Modes) -->
-  <video id="coupleVideoBg" loop muted playsinline>
+  <!-- Romantic Couple Video Background (preload="none" for instant initial page load) -->
+  <video id="coupleVideoBg" loop muted playsinline preload="none">
     <source src="https://assets.mixkit.co/videos/preview/mixkit-silhouette-of-a-couple-at-sunset-4189-large.mp4" type="video/mp4" />
   </video>
 
@@ -130,7 +130,6 @@
     <main class="main-view">
       <!-- Top Header Bar (Responsive for Mobile & Desktop) -->
       <header class="top-bar">
-        <!-- Mobile Brand Row + Top Right Login/Register Button -->
         <div class="top-header-row">
           <div class="brand mobile-brand">
             <div class="brand-icon">♫</div>
@@ -146,12 +145,12 @@
               🌸 <span id="sakuraStatus">Sakura: ON</span>
             </div>
 
-            <!-- Simple Top-Corner Login / Register Button (Visible when not logged in) -->
+            <!-- Simple Top-Corner Login / Register Button -->
             <button id="guestAuthBtn" class="btn-login-top" onclick="openAuthModal('login')">
               👤 Login / Register
             </button>
 
-            <!-- Logged-In User Badge (Appears automatically after Login/Register) -->
+            <!-- Logged-In User Badge -->
             <div id="userProfilePill" class="pill user-pill" style="display:none;">
               <img id="headerUserAvatar" src="https://api.dicebear.com/9.x/adventurer/svg?seed=User" alt="Avatar" />
               <span id="headerUserName">User</span>
@@ -167,7 +166,7 @@
           <button class="yt-search-btn" onclick="searchRealSongs('youtube')" title="Search Global YouTube Music">🌎 Global</button>
         </div>
 
-        <!-- Mobile Quick Studio Strip (Lets mobile users open every floating window easily) -->
+        <!-- Mobile Quick Studio Strip -->
         <div class="mobile-studio-strip">
           <button class="studio-pill" onclick="toggleWindow('bgWin')">🖼️ Wallpapers</button>
           <button class="studio-pill" onclick="toggleWindow('fxWin')">🎧 Slowed+FX</button>
@@ -216,10 +215,20 @@
 
         <div class="section-header-row">
           <h3 id="catalogHeading">Trending Full-Length Songs</h3>
-          <span id="loadingIndicator" style="color:var(--accent); font-size:0.84rem; display:none;">⏳ Loading full songs...</span>
+          <span id="loadingIndicator" class="shimmer-status-pill" style="display:none;">✨ Fetching 320kbps tracks...</span>
         </div>
 
-        <div id="discoverGrid" class="song-grid"></div>
+        <!-- Pre-populated with Shimmer Skeleton Cards on Initial Page Load -->
+        <div id="discoverGrid" class="song-grid">
+          <div class="skeleton-card"><div class="skeleton-art shimmer"></div><div class="skeleton-line title shimmer"></div><div class="skeleton-line sub shimmer"></div></div>
+          <div class="skeleton-card"><div class="skeleton-art shimmer"></div><div class="skeleton-line title shimmer"></div><div class="skeleton-line sub shimmer"></div></div>
+          <div class="skeleton-card"><div class="skeleton-art shimmer"></div><div class="skeleton-line title shimmer"></div><div class="skeleton-line sub shimmer"></div></div>
+          <div class="skeleton-card"><div class="skeleton-art shimmer"></div><div class="skeleton-line title shimmer"></div><div class="skeleton-line sub shimmer"></div></div>
+          <div class="skeleton-card"><div class="skeleton-art shimmer"></div><div class="skeleton-line title shimmer"></div><div class="skeleton-line sub shimmer"></div></div>
+          <div class="skeleton-card"><div class="skeleton-art shimmer"></div><div class="skeleton-line title shimmer"></div><div class="skeleton-line sub shimmer"></div></div>
+          <div class="skeleton-card"><div class="skeleton-art shimmer"></div><div class="skeleton-line title shimmer"></div><div class="skeleton-line sub shimmer"></div></div>
+          <div class="skeleton-card"><div class="skeleton-art shimmer"></div><div class="skeleton-line title shimmer"></div><div class="skeleton-line sub shimmer"></div></div>
+        </div>
 
         <div style="text-align:center; margin: 24px 0 12px;">
           <button id="loadMoreBtn" class="btn-primary" onclick="loadMoreSongs()">+ Load More Full Songs</button>
@@ -350,9 +359,7 @@
     </footer>
   </div>
 
-  <!-- =========================================================================
-       MOBILE BOTTOM NAVIGATION BAR (VISIBLE ON MOBILE PHONES)
-       ========================================================================= -->
+  <!-- MOBILE BOTTOM NAVIGATION BAR -->
   <nav class="mobile-bottom-nav">
     <button class="mob-nav-btn active" data-sec="discover" onclick="switchSection('discover')">
       <span class="mob-icon">✨</span>
