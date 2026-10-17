@@ -12,19 +12,17 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "velvetsync-fullsong-secret-2026")
 
-# Threading mode with simple-websocket for Railway
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
 active_rooms = {}
 
-# Official DES Cipher for decrypting full-length 320kbps streams
 DES_CIPHER = des(b"38346591", ECB, b"\0\0\0\0\0\0\0\0", pad=None, padmode=PAD_PKCS5)
 
 HTTP_HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (Linux; Android 14; Pixel 8) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
     ),
     "Accept": "application/json, text/plain, */*",
 }
@@ -127,7 +125,6 @@ def current_user():
 # 2. FULL-LENGTH 320KBPS MUSIC ENGINE + GLOBAL YOUTUBE MUSIC FALLBACK
 # ==============================================================================
 def decrypt_full_stream_url(enc_url, is_320=True):
-    """Decrypts official encrypted_media_url into a full-length 320kbps stream link."""
     if not enc_url:
         return None
     try:
@@ -143,10 +140,6 @@ def decrypt_full_stream_url(enc_url, is_320=True):
 
 
 def fetch_official_full_songs(query, page=1, limit=28):
-    """
-    Connects directly to the Official JioSaavn API v4 and decrypts 100% full-length
-    Hindi, English, Punjabi, Marathi, and Global songs (zero 30-second previews).
-    """
     tracks = []
     try:
         resp = requests.get(
@@ -177,7 +170,6 @@ def fetch_official_full_songs(query, page=1, limit=28):
                     continue
 
                 duration_sec = int(more.get("duration") or 210)
-                # Filter out any ringtone or short clip under 60 seconds
                 if duration_sec < 60:
                     continue
 
@@ -210,10 +202,6 @@ def fetch_official_full_songs(query, page=1, limit=28):
 
 
 def fetch_youtube_full_songs(query, limit=12):
-    """
-    Searches YouTube Music / YouTube via yt-dlp for any global song, remix, or
-    Slowed + Reverb track not found in standard catalogs. Full length only.
-    """
     tracks = []
     ydl_opts = {
         "quiet": True,
@@ -250,7 +238,6 @@ def fetch_youtube_full_songs(query, limit=12):
 
 @app.route("/api/yt_stream/<video_id>")
 def stream_youtube_audio(video_id):
-    """Resolves a YouTube video ID into a direct full-length audio stream."""
     ydl_opts = {
         "format": "bestaudio[ext=m4a]/bestaudio/best",
         "quiet": True,
@@ -285,7 +272,7 @@ CATEGORY_QUERIES = {
     ],
     "punjabi": [
         "Diljit Dosanjh Karan Aujla AP Dhillon",
-        "Shubh Sidhu Moose Wala गुरु रंधावा",
+        "Shubh Sidhu Moose Wala Guru Randhawa",
     ],
     "marathi": [
         "Ajay Atul Marathi Romantic Hits",
@@ -314,7 +301,6 @@ def get_songs():
             songs = fetch_youtube_full_songs(query, limit=18)
         else:
             songs = fetch_official_full_songs(query, page=page, limit=30)
-            # If searching for a rare global remix or underground track, append YouTube Music results
             if len(songs) < 8 and page == 1:
                 songs.extend(fetch_youtube_full_songs(query, limit=10))
         return jsonify({"songs": songs, "page": page})
@@ -335,14 +321,12 @@ def get_songs():
 
 @app.route("/api/download")
 def download_audio():
-    """Downloads the full-length 320kbps song file to the user's device."""
     url = request.args.get("url")
     title = request.args.get("title", "VelvetSync_Full_Song").replace(" ", "_")
     if not url:
         return "Missing audio URL", 400
 
     try:
-        # Handle relative YouTube stream endpoints
         if url.startswith("/api/yt_stream/"):
             vid_id = url.split("/")[-1]
             ydl_opts = {"format": "bestaudio[ext=m4a]/bestaudio/best", "quiet": True}
