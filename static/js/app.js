@@ -1,7 +1,16 @@
 /* =========================================================================
-   1. REAL USER AUTHENTICATION (LOGIN / REGISTER)
+   1. OPTIONAL USER AUTHENTICATION (TOP-CORNER BUTTON -> MODAL)
    ========================================================================= */
 let currentUser = null;
+
+function openAuthModal(defaultTab = "login") {
+  document.getElementById("authOverlay").classList.remove("hidden");
+  switchAuthTab(defaultTab);
+}
+
+function closeAuthModal() {
+  document.getElementById("authOverlay").classList.add("hidden");
+}
 
 function switchAuthTab(mode) {
   const loginForm = document.getElementById("loginForm");
@@ -27,6 +36,13 @@ async function checkLoggedInUser() {
     const data = await res.json();
     if (data.user) {
       applyAuthenticatedUser(data.user);
+    } else {
+      renderRoomMembers([
+        {
+          name: "Guest Listener",
+          avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Guest"
+        }
+      ]);
     }
   } catch (e) {
     console.error("Session check error:", e);
@@ -74,23 +90,22 @@ async function handleRegister(e) {
 async function handleLogout() {
   await fetch("/api/logout", { method: "POST" });
   currentUser = null;
-  document.getElementById("authOverlay").classList.remove("hidden");
+  document.getElementById("userProfilePill").style.display = "none";
+  document.getElementById("guestAuthBtn").style.display = "inline-block";
 }
 
 function applyAuthenticatedUser(user) {
   currentUser = user;
-  document.getElementById("authOverlay").classList.add("hidden");
+  closeAuthModal();
+  document.getElementById("guestAuthBtn").style.display = "none";
+  document.getElementById("userProfilePill").style.display = "flex";
   document.getElementById("headerUserName").textContent = user.name;
   document.getElementById("headerUserAvatar").src = user.avatar;
 
   renderRoomMembers([user]);
 
-  const params = new URLSearchParams(window.location.search);
-  const room = params.get("room");
-  const mode = params.get("mode") || "duo";
-  if (room) {
-    switchSection(mode, document.querySelectorAll(".nav-btn")[mode === "duo" ? 1 : 2]);
-    activateRoomExperience(room, mode);
+  if (activeRoomId && socket) {
+    socket.emit("join_sync_room", { room: activeRoomId, mode: "duo", user });
   }
 }
 
@@ -238,6 +253,7 @@ async function searchRealSongs(source = "auto") {
     return;
   }
 
+  switchSection("discover");
   activeQuery = query;
   activePage = 1;
 
@@ -524,8 +540,8 @@ function activateRoomExperience(roomCode, mode) {
   document.getElementById("syncStatusText").textContent = `${mode.toUpperCase()} Live: ${roomCode}`;
 
   const userPayload = currentUser || {
-    name: "Listener",
-    avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Listener"
+    name: "Guest Listener",
+    avatar: "https://api.dicebear.com/9.x/adventurer/svg?seed=Guest"
   };
 
   if (socket) {
@@ -617,7 +633,7 @@ function sendChatMessage() {
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text) return;
-  const userName = currentUser ? currentUser.name : "Listener";
+  const userName = currentUser ? currentUser.name : "Guest Listener";
 
   if (socket && activeRoomId) {
     socket.emit("send_chat", { room: activeRoomId, user: userName, text });
@@ -649,8 +665,8 @@ function spawnEmojiBurst(emoji) {
     const p = document.createElement("div");
     p.className = "heart-particle";
     p.textContent = emoji;
-    p.style.left = `${20 + Math.random() * 60}vw`;
-    p.style.top = `${65 + Math.random() * 20}vh`;
+    p.style.left = `${15 + Math.random() * 70}vw`;
+    p.style.top = `${60 + Math.random() * 20}vh`;
     document.body.appendChild(p);
     setTimeout(() => p.remove(), 1400);
   }
@@ -671,13 +687,13 @@ function resizeSakura() {
 window.addEventListener("resize", resizeSakura);
 resizeSakura();
 
-for (let i = 0; i < 48; i++) {
+for (let i = 0; i < 40; i++) {
   petals.push({
     x: Math.random() * window.innerWidth,
     y: Math.random() * window.innerHeight,
-    r: 5 + Math.random() * 7,
-    speedY: 0.7 + Math.random() * 1.4,
-    speedX: -0.5 + Math.random() * 1.5,
+    r: 5 + Math.random() * 6,
+    speedY: 0.7 + Math.random() * 1.3,
+    speedX: -0.5 + Math.random() * 1.4,
     angle: Math.random() * Math.PI * 2,
     spin: (Math.random() - 0.5) * 0.03
   });
@@ -722,6 +738,7 @@ function toggleSakura() {
    ========================================================================= */
 function startFooterVisualizer() {
   const canvas = document.getElementById("freqCanvas");
+  if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
   function renderBars() {
@@ -836,11 +853,15 @@ function addNewSong() {
   playSong(0);
 }
 
-function switchSection(sectionId, btn) {
+/* Switches sections across both Desktop Sidebar and Mobile Bottom Navigation Bar */
+function switchSection(sectionId) {
   document.querySelectorAll(".view-section").forEach((s) => s.classList.remove("active"));
-  document.getElementById(`sec-${sectionId}`).classList.add("active");
-  document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
-  if (btn) btn.classList.add("active");
+  const target = document.getElementById(`sec-${sectionId}`);
+  if (target) target.classList.add("active");
+
+  document.querySelectorAll(".nav-btn, .mob-nav-btn").forEach((b) => {
+    b.classList.toggle("active", b.getAttribute("data-sec") === sectionId);
+  });
 
   if (sectionId === "couple") {
     sakuraActive = true;
@@ -859,7 +880,10 @@ function playCouplePlaylist() {
 
 function toggleWindow(winId) {
   const win = document.getElementById(winId);
-  win.classList.toggle("open");
+  const isOpen = win.classList.contains("open");
+  // Close other open floating windows on mobile so they don't overlap
+  document.querySelectorAll(".floating-window").forEach((w) => w.classList.remove("open"));
+  if (!isOpen) win.classList.add("open");
 }
 
 function setTheme(themeName, sync = false) {
@@ -892,7 +916,7 @@ function triggerFavHeart(e, toggleCurrent = true) {
   }
 }
 
-// Initialize App on Load
+// Initialize App on Load (No blocking login modal on start)
 window.addEventListener("DOMContentLoaded", () => {
   startBgSlideshow(8);
   sakuraCanvas.classList.add("active");
@@ -900,4 +924,13 @@ window.addEventListener("DOMContentLoaded", () => {
   startFooterVisualizer();
   checkLoggedInUser();
   loadSongCategory("all");
+
+  // Auto-join if user opens a shared Duo or Trio Link on mobile or desktop
+  const params = new URLSearchParams(window.location.search);
+  const room = params.get("room");
+  const mode = params.get("mode") || "duo";
+  if (room) {
+    switchSection(mode);
+    activateRoomExperience(room, mode);
+  }
 });
