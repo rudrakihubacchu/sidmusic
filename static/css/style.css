@@ -60,7 +60,69 @@ body {
 }
 
 /* =========================================================================
-   LOGIN / REGISTER MODAL OVERLAY (OPENS ON CLICK)
+   ANIMATED SHIMMER SKELETON LOADING CARDS
+   ========================================================================= */
+.skeleton-card {
+  background: var(--card-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  padding: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-art {
+  width: 100%;
+  height: 150px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.skeleton-line {
+  height: 13px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.skeleton-line.title {
+  width: 82%;
+}
+.skeleton-line.sub {
+  width: 54%;
+  height: 10px;
+  margin-bottom: 2px;
+}
+
+.shimmer {
+  background: linear-gradient(
+    110deg,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 77, 141, 0.24) 48%,
+    rgba(255, 255, 255, 0.14) 54%,
+    rgba(255, 255, 255, 0.05) 80%
+  );
+  background-size: 220% 100%;
+  animation: shimmerSweep 1.35s infinite linear;
+}
+
+@keyframes shimmerSweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.shimmer-status-pill {
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fff;
+  border: 1px solid var(--primary);
+  background: rgba(255, 77, 141, 0.18);
+  box-shadow: var(--glow);
+  animation: pulseBeat 1.4s infinite;
+}
+
+/* =========================================================================
+   LOGIN / REGISTER MODAL OVERLAY
    ========================================================================= */
 .auth-overlay {
   position: fixed;
@@ -130,7 +192,6 @@ body {
   min-height: 18px;
 }
 
-/* Top-Right Login / Register Button */
 .btn-login-top {
   padding: 7px 15px;
   border-radius: 99px;
@@ -251,7 +312,7 @@ body {
 
 @keyframes pulseBeat {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+  50% { transform: scale(1.06); }
 }
 
 .nav-menu {
@@ -388,7 +449,7 @@ body {
   white-space: nowrap;
 }
 
-/* Mobile Quick Studio Strip (Hidden on Desktop, Visible on Mobile) */
+/* Mobile Quick Studio Strip */
 .mobile-studio-strip {
   display: none;
   gap: 8px;
@@ -537,6 +598,8 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 /* Spinning Vinyl Disc */
@@ -603,6 +666,7 @@ body {
   cursor: pointer;
   position: relative;
   overflow: hidden;
+  animation: fadeSlide 0.3s ease forwards;
 }
 .song-card:hover {
   transform: translateY(-4px);
@@ -903,7 +967,6 @@ body {
   border: 1px solid var(--border-glass);
 }
 
-/* Mobile Bottom Navigation Bar (Hidden on Desktop) */
 .mobile-bottom-nav {
   display: none;
 }
@@ -1048,7 +1111,7 @@ body {
     height: 100dvh;
     border: none;
     border-radius: 0;
-    padding: 12px 12px 210px 12px; /* Space at bottom for mobile player + nav bar */
+    padding: 12px 12px 210px 12px;
     gap: 12px;
   }
 
@@ -1104,16 +1167,16 @@ body {
     padding: 7px 12px;
   }
 
-  /* 2-Column Spotify-Style Song Grid on Mobile Phones */
+  /* 2-Column Spotify-Style Song & Skeleton Grid on Mobile Phones */
   .song-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
-  .song-card {
+  .song-card, .skeleton-card {
     padding: 9px;
     border-radius: 14px;
   }
-  .art-wrapper {
+  .art-wrapper, .skeleton-art {
     height: 130px;
     margin-bottom: 8px;
   }
@@ -1129,7 +1192,6 @@ body {
     gap: 12px;
   }
 
-  /* Docked Mobile Player Above Bottom Nav */
   .player-bar {
     position: fixed;
     left: 8px;
@@ -1164,7 +1226,6 @@ body {
     display: none;
   }
 
-  /* Fixed Mobile Bottom Navigation Bar */
   .mobile-bottom-nav {
     position: fixed;
     bottom: 0;
@@ -1201,7 +1262,6 @@ body {
     background: rgba(255, 77, 141, 0.12);
   }
 
-  /* Centered Floating Windows on Mobile */
   .floating-window {
     top: auto;
     bottom: 145px;
