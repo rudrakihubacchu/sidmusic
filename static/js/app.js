@@ -132,11 +132,11 @@ function renderRoomMembers(members) {
    2. AUTOMATIC COUPLE BACKGROUND SLIDESHOW (PINTEREST / ROMANTIC AESTHETIC)
    ========================================================================= */
 const coupleWallpapers = [
-  "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=1600&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=1600&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=1600&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1494774157365-9e04c6720e47?w=1600&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1600&auto=format&fit=crop&q=80"
+  "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=1200&auto=format&fit=crop&q=75",
+  "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=1200&auto=format&fit=crop&q=75",
+  "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=1200&auto=format&fit=crop&q=75",
+  "https://images.unsplash.com/photo-1494774157365-9e04c6720e47?w=1200&auto=format&fit=crop&q=75",
+  "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1200&auto=format&fit=crop&q=75"
 ];
 let bgIndex = 0;
 let activeLayer = 1;
@@ -182,7 +182,7 @@ function updateBgSpeed(sec) {
 }
 
 /* =========================================================================
-   3. 100% FULL-LENGTH SONGS ENGINE (320KBPS + GLOBAL YOUTUBE MUSIC)
+   3. 100% FULL-LENGTH SONGS ENGINE + MEDIASESSION API (LOCK-SCREEN CONTROLS)
    ========================================================================= */
 let songs = [];
 let likedSongsMap = new Map();
@@ -209,6 +209,72 @@ function formatDuration(sec) {
   return `${m}:${s}`;
 }
 
+/* Setup MediaSession API for Phone Lock-Screen & Notification Controls */
+function initMediaSessionHandlers() {
+  if (!("mediaSession" in navigator)) return;
+
+  navigator.mediaSession.setActionHandler("play", () => togglePlay(true));
+  navigator.mediaSession.setActionHandler("pause", () => togglePlay(true));
+  navigator.mediaSession.setActionHandler("previoustrack", () => prevSong());
+  navigator.mediaSession.setActionHandler("nexttrack", () => nextSong());
+  navigator.mediaSession.setActionHandler("seekbackward", (details) => {
+    htmlAudio.currentTime = Math.max(0, htmlAudio.currentTime - (details.seekOffset || 10));
+  });
+  navigator.mediaSession.setActionHandler("seekforward", (details) => {
+    htmlAudio.currentTime = Math.min(htmlAudio.duration || 0, htmlAudio.currentTime + (details.seekOffset || 10));
+  });
+  try {
+    navigator.mediaSession.setActionHandler("seekto", (details) => {
+      if (details.seekTime !== undefined && htmlAudio.duration) {
+        htmlAudio.currentTime = details.seekTime;
+        const pct = (details.seekTime / htmlAudio.duration) * 100;
+        document.getElementById("seekBar").value = pct;
+        broadcastSyncState("SEEK", { currentTime: details.seekTime });
+      }
+    });
+  } catch (e) {}
+}
+
+function updateMediaSessionMetadata(track) {
+  if (!("mediaSession" in navigator)) return;
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: track.title,
+    artist: track.artist,
+    album: "VelvetSync 320kbps Sanctuary",
+    artwork: [
+      { src: track.cover, sizes: "96x96", type: "image/jpeg" },
+      { src: track.cover, sizes: "128x128", type: "image/jpeg" },
+      { src: track.cover, sizes: "192x192", type: "image/jpeg" },
+      { src: track.cover, sizes: "512x512", type: "image/jpeg" },
+    ],
+  });
+  navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+}
+
+function renderSkeletonCards(count = 8, append = false) {
+  const discoverGrid = document.getElementById("discoverGrid");
+  if (!discoverGrid) return;
+
+  const skeletonHTML = Array.from({ length: count })
+    .map(
+      () => `
+      <div class="skeleton-card temp-skeleton">
+        <div class="skeleton-art shimmer"></div>
+        <div class="skeleton-line title shimmer"></div>
+        <div class="skeleton-line sub shimmer"></div>
+      </div>
+    `
+    )
+    .join("");
+
+  if (append) {
+    discoverGrid.insertAdjacentHTML("beforeend", skeletonHTML);
+  } else {
+    discoverGrid.innerHTML = skeletonHTML;
+  }
+}
+
 async function loadSongCategory(category = "all") {
   activeCategory = category;
   activeQuery = "";
@@ -216,7 +282,7 @@ async function loadSongCategory(category = "all") {
   document.getElementById("searchInput").value = "";
 
   const loader = document.getElementById("loadingIndicator");
-  if (loader) loader.style.display = "inline";
+  if (loader) loader.style.display = "inline-block";
 
   const headingMap = {
     all: "🔥 All Trending Full-Length Songs",
@@ -228,6 +294,8 @@ async function loadSongCategory(category = "all") {
     party: "💃 Party & Club Anthems"
   };
   document.getElementById("catalogHeading").textContent = headingMap[category] || headingMap.all;
+
+  renderSkeletonCards(8, false);
 
   try {
     const res = await fetch(`/api/songs?category=${encodeURIComponent(category)}&page=1`);
@@ -258,11 +326,13 @@ async function searchRealSongs(source = "auto") {
   activePage = 1;
 
   const loader = document.getElementById("loadingIndicator");
-  if (loader) loader.style.display = "inline";
+  if (loader) loader.style.display = "inline-block";
   document.getElementById("catalogHeading").textContent =
     source === "youtube"
       ? `🌎 Global YouTube Music Results for "${query}"`
       : `Full-Length Results for "${query}"`;
+
+  renderSkeletonCards(8, false);
 
   try {
     const res = await fetch(
@@ -284,7 +354,9 @@ async function searchRealSongs(source = "auto") {
 async function loadMoreSongs() {
   activePage += 1;
   const loader = document.getElementById("loadingIndicator");
-  if (loader) loader.style.display = "inline";
+  if (loader) loader.style.display = "inline-block";
+
+  renderSkeletonCards(4, true);
 
   try {
     const url = activeQuery
@@ -298,10 +370,11 @@ async function loadMoreSongs() {
         .filter((s) => !existingIds.has(s.id))
         .map((s) => ({ ...s, liked: likedSongsMap.has(s.id) }));
       songs = [...songs, ...newTracks];
-      renderSongs();
     }
+    renderSongs();
   } catch (err) {
     console.error("Load more failed:", err);
+    document.querySelectorAll(".temp-skeleton").forEach((el) => el.remove());
   } finally {
     if (loader) loader.style.display = "none";
   }
@@ -333,6 +406,9 @@ function playSong(index, broadcast = true) {
 
   htmlAudio.play().catch((err) => console.warn("Playback interaction needed:", err));
   renderSongs();
+
+  // Update Lock-Screen MediaSession metadata
+  updateMediaSessionMetadata(track);
 
   if (broadcast) {
     broadcastSyncState("PLAY_TRACK", { track, currentTime: 0 });
@@ -367,6 +443,10 @@ function togglePlay(broadcast = true) {
     isPlaying = false;
     document.getElementById("playPauseBtn").textContent = "▶";
     document.getElementById("vinylDisc").classList.remove("spinning");
+  }
+
+  if ("mediaSession" in navigator) {
+    navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
   }
 
   renderSongs();
@@ -406,6 +486,17 @@ htmlAudio.addEventListener("timeupdate", () => {
   document.getElementById("seekBar").value = pct;
   document.getElementById("curTime").textContent = formatDuration(htmlAudio.currentTime);
   document.getElementById("durTime").textContent = formatDuration(totalDur);
+
+  // Update lock-screen position state if supported
+  if ("mediaSession" in navigator && typeof navigator.mediaSession.setPositionState === "function") {
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: totalDur,
+        playbackRate: htmlAudio.playbackRate,
+        position: htmlAudio.currentTime,
+      });
+    } catch (e) {}
+  }
 });
 
 htmlAudio.addEventListener("ended", () => {
@@ -485,7 +576,7 @@ function toggleRainAmbience() {
   rainFilter.frequency.value = 900;
 
   rainNode.connect(rainFilter);
-  rainFilter.connect(audioCtx.destination);
+  rainNode.connect(audioCtx.destination);
   rainNode.start();
 
   btn.classList.add("active");
@@ -853,7 +944,6 @@ function addNewSong() {
   playSong(0);
 }
 
-/* Switches sections across both Desktop Sidebar and Mobile Bottom Navigation Bar */
 function switchSection(sectionId) {
   document.querySelectorAll(".view-section").forEach((s) => s.classList.remove("active"));
   const target = document.getElementById(`sec-${sectionId}`);
@@ -881,7 +971,6 @@ function playCouplePlaylist() {
 function toggleWindow(winId) {
   const win = document.getElementById(winId);
   const isOpen = win.classList.contains("open");
-  // Close other open floating windows on mobile so they don't overlap
   document.querySelectorAll(".floating-window").forEach((w) => w.classList.remove("open"));
   if (!isOpen) win.classList.add("open");
 }
@@ -916,16 +1005,16 @@ function triggerFavHeart(e, toggleCurrent = true) {
   }
 }
 
-// Initialize App on Load (No blocking login modal on start)
+// Initialize App on Load
 window.addEventListener("DOMContentLoaded", () => {
   startBgSlideshow(8);
   sakuraCanvas.classList.add("active");
   animateSakura();
   startFooterVisualizer();
   checkLoggedInUser();
+  initMediaSessionHandlers();
   loadSongCategory("all");
 
-  // Auto-join if user opens a shared Duo or Trio Link on mobile or desktop
   const params = new URLSearchParams(window.location.search);
   const room = params.get("room");
   const mode = params.get("mode") || "duo";
